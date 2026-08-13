@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa del Liceo Bicentenario Manuel Montt</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <img src="logo1.png" alt="Logo" class="marca-de-agua">
+
+    <div class="container">
+        
+        <!-- Zona Izquierda: Contenido Principal -->
+        <main class="content">
+            <h2>Mapa del liceo.</h2>
+            <h3>Zona: <span id="nombre-zona" class="texto-destacado">Ninguna seleccionada</span></h3>
+            <img id="img-zona" src="mapa_liceo.png" alt="Mapa del liceo" width="100%" height="300">
+            
+            <div class="zona-inferior">
+                <h2>Descripción y cómo llegar</h2>
+                <p id="desc-zona" class="texto-descripcion">Haz clic en cualquier zona del menú lateral para ver su información y ubicación aquí.</p>
+            </div>
+        </main>
+        <aside class="sidebar">
+            <div class="titulo-menu">
+                <h3>Zonas del liceo</h3>
+            </div>
+            
+            <div class="sidebar-content">
+                <label for="buscador"><b>Buscar zona:</b></label><br>
+                <input type="text" id="buscador" onkeyup="buscarZona()" placeholder="Escribe nombre o ID...">
+                
+                <h3 class="titulo-categorias">Categorías</h3>
+                <details>
+                    <summary><b>Baños</b></summary>
+                    <ul>
+                        <li>
+                            <details>
+                                <summary class="subcategoria">Baños de Hombres</summary>
+                                <ul>
+                                    <li><a id="bano-h1" href="#" data-nombre="Baño de Hombres 1" data-img="bano_h1.png" data-desc="Ubicado cerca de la sala de estructuras metálicas" onclick="cargarZonaPorId(this.id); return false;">Baños de Hombres 1</a></li>
+                                    <li><a id="bano-h2" href="#" data-nombre="Baño de Hombres 2" data-img="bano_h2.png" data-desc="Ubicado Al frente del 3A Y 4A." onclick="cargarZonaPorId(this.id); return false;">Baños de Hombres 2</a></li>
+                                    <li><a id="bano-h3" href="#" data-nombre="Baño de Hombres 3" data-img="bano_h3.png" data-desc="Ubicado al lado de Laboratorio de electricidad" onclick="cargarZonaPorId(this.id); return false;">Baños de Hombres 3</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                        <li>
+                            <details>
+                                <summary class="subcategoria">Baños de Mujeres</summary>
+                                <ul>
+                                    <li><a id="bano-m1" href="#" data-nombre="Baño de Mujeres 1" data-img="bano_m1.png" data-desc="Ubicado al lado del almacenamiento de educación física" onclick="cargarZonaPorId(this.id); return false;">Baños de Mujeres 1</a></li>
+                                    <li><a id="bano-m2" href="#" data-nombre="Baño de Mujeres 2" data-img="bano_m2.png" data-desc="Ubicado al lado del Laboratorio de programación" onclick="cargarZonaPorId(this.id); return false;">Baños de Mujeres 2</a></li>
+                                    <li><a id="bano-m3" href="#" data-nombre="Baño de Mujeres 3" data-img="bano_m3.png" data-desc="Ubicado al lado del Laboratorio de química" onclick="cargarZonaPorId(this.id); return false;">Baños de Mujeres 3</a></li>
+                                    <li><a id="bano-m4" href="#" data-nombre="Baño de Mujeres 4" data-img="bano_m4.png" data-desc="Ubicado al frente del comedor" onclick="cargarZonaPorId(this.id); return false;">Baños de Mujeres 4</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                    </ul>
+                </details>
+                <details>
+                    <summary><b>Salas de Clases (Cursos)</b></summary>
+                    <ul>
+                        <li>
+                            <details>
+                                <summary class="subcategoria">1 medio</summary>
+                                <ul>
+                                    <li><a id="sala-1a" href="#" data-nombre="Sala 1 medio A" data-img="1a.png" data-desc="Sala asignada al 1 medio A. Cuenta con proyector y climatización." onclick="cargarZonaPorId(this.id); return false;">1 medio A</a></li>
+                                    <li><a id="sala-1b" href="#" data-nombre="Sala 1 medio B" data-img="1b.png" data-desc="Sala asignada al 1 medio B. Primer piso del pabellón central." onclick="cargarZonaPorId(this.id); return false;">1 medio B</a></li>
+                                    <li><a id="sala-1c" href="#" data-nombre="Sala 1 medio C" data-img="1c.png" data-desc="Sala asignada al 1 medio C. Junto a la biblioteca." onclick="cargarZonaPorId(this.id); return false;">1 medio C</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                        <li>
+                            <details>
+                                <summary class="subcategoria">2 medio</summary>
+                                <ul>
+                                    <li><a id="sala-2a" href="#" data-nombre="Sala 2 medio A" data-img="2a.png" data-desc="Sala asignada al 2 medio A. Pabellón B, primer piso." onclick="cargarZonaPorId(this.id); return false;">2 medio A</a></li>
+                                    <li><a id="sala-2b" href="#" data-nombre="Sala 2 medio B" data-img="2b.png" data-desc="Sala asignada al 2 medio B. Pabellón B, primer piso." onclick="cargarZonaPorId(this.id); return false;">2 medio B</a></li>
+                                    <li><a id="sala-2c" href="#" data-nombre="Sala 2 medio C" data-img="2c.png" data-desc="Sala asignada al 2 medio C. Pabellón B, segundo piso." onclick="cargarZonaPorId(this.id); return false;">2 medio C</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                        <li>
+                            <details>
+                                <summary class="subcategoria">3 medio</summary>
+                                <ul>
+                                    <li><a id="sala-3a" href="#" data-nombre="Sala 3 medio A" data-img="3a.png" data-desc="Sala asignada al 3 medio A. Pabellón C, primer piso." onclick="cargarZonaPorId(this.id); return false;">3 medio A</a></li>
+                                    <li><a id="sala-3b" href="#" data-nombre="Sala 3 medio B" data-img="3b.png" data-desc="Sala asignada al 3 medio B. Pabellón C, primer piso." onclick="cargarZonaPorId(this.id); return false;">3 medio B</a></li>
+                                    <li><a id="sala-3c" href="#" data-nombre="Sala 3 medio C" data-img="3c.png" data-desc="Sala asignada al 3 medio C. Pabellón C, segundo piso." onclick="cargarZonaPorId(this.id); return false;">3 medio C</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                        <li>
+                            <details>
+                                <summary class="subcategoria">4 medio</summary>
+                                <ul>
+                                    <li><a id="sala-4a" href="#" data-nombre="Sala 4 medio A" data-img="4a.png" data-desc="Sala asignada al 4 medio A. Edificio Senior, primer piso." onclick="cargarZonaPorId(this.id); return false;">4 medio A</a></li>
+                                    <li><a id="sala-4b" href="#" data-nombre="Sala 4 medio B" data-img="4b.png" data-desc="Sala asignada al 4 medio B. Edificio Senior, primer piso." onclick="cargarZonaPorId(this.id); return false;">4 medio B</a></li>
+                                    <li><a id="sala-4c" href="#" data-nombre="Sala 4 medio C" data-img="4c.png" data-desc="Sala asignada al 4 medio C. Edificio Senior, segundo piso." onclick="cargarZonaPorId(this.id); return false;">4 medio C</a></li>
+                                </ul>
+                            </details>
+                        </li>
+                    </ul>
+                </details>
+                <details>
+                    <summary><b>Salas Talleres</b></summary>
+                    <ul>
+                        <li><a id="taller-computacion" href="#" data-nombre="Taller de Computación" data-img="computacion.png" data-desc="Laboratorio equipado con 30 ordenadores e internet de alta velocidad." onclick="cargarZonaPorId(this.id); return false;">Taller de Computación</a></li>
+                        <li><a id="taller-ciencias" href="#" data-nombre="Taller de Ciencias" data-img="ciencias.png" data-desc="Laboratorio de biología y química con elementos de protección." onclick="cargarZonaPorId(this.id); return false;">Taller de Ciencias</a></li>
+                        <li><a id="taller-arte" href="#" data-nombre="Taller de Arte" data-img="arte.png" data-desc="Espacio de expresión artística equipado con atriles y pintura." onclick="cargarZonaPorId(this.id); return false;">Taller de Arte</a></li>
+                        <li><a id="taller-robotica" href="#" data-nombre="Taller de Robótica" data-img="robotica.png" data-desc="Espacio para desarrollo tecnológico y kits de robótica." onclick="cargarZonaPorId(this.id); return false;">Taller de Robótica</a></li>
+                    </ul>
+                </details>
+                <details>
+                    <summary><b>Oficinas</b></summary>
+                    <ul>
+                        <li><a id="oficina-direccion" href="#" data-nombre="Dirección" data-img="direccion.png" data-desc="Oficina del Director del liceo. Atención previa cita." onclick="cargarZonaPorId(this.id); return false;">Dirección</a></li>
+                        <li><a id="oficina-secretaria" href="#" data-nombre="Secretaría" data-img="secretaria.png" data-desc="Atención a apoderados y trámites documentales." onclick="cargarZonaPorId(this.id); return false;">Secretaría</a></li>
+                        <li><a id="oficina-inspectoria" href="#" data-nombre="Inspectoría General" data-img="inspectoria.png" data-desc="Control de disciplina, asistencia y justificativos." onclick="cargarZonaPorId(this.id); return false;">Inspectoría General</a></li>
+                        <li><a id="oficina-orientacion" href="#" data-nombre="Orientación" data-img="orientacion.png" data-desc="Oficina de orientación vocacional y apoyo al estudiante." onclick="cargarZonaPorId(this.id); return false;">Orientación</a></li>
+                    </ul>
+                </details>
+                <details>
+                    <summary><b>Zonas de Seguridad</b></summary>
+                    <ul>
+                        <li><a id="zona-seguridad-1" href="#" data-nombre="Zona de Seguridad 1" data-img="zona_seg_1.png" data-desc="Zona de evacuación principal ubicada en el Patio Principal." onclick="cargarZonaPorId(this.id); return false;">Zona de Seguridad 1 (Patio Principal)</a></li>
+                        <li><a id="zona-seguridad-2" href="#" data-nombre="Zona de Seguridad 2" data-img="zona_seg_2.png" data-desc="Zona de evacuación secundaria ubicada en la Cancha de Deportes." onclick="cargarZonaPorId(this.id); return false;">Zona de Seguridad 2 (Cancha)</a></li>
+                    </ul>
+                </details>
+            </div>
+        </aside>
+    </div>
+    <script>
+        // Función para cargar los datos en el panel izquierdo
+        function cargarZonaPorId(idElemento) {
+            let elemento = document.getElementById(idElemento);
+
+            if (elemento) {
+                let nombre = elemento.getAttribute('data-nombre');
+                let imagen = elemento.getAttribute('data-img');
+                let descripcion = elemento.getAttribute('data-desc');
+
+                document.getElementById('nombre-zona').innerText = nombre;
+                document.getElementById('img-zona').src = imagen;
+                document.getElementById('desc-zona').innerText = descripcion;
+            }
+        }
+        // Función para buscar en el menú
+        function buscarZona() {
+            let input = document.getElementById('buscador').value.toLowerCase().trim();
+            // Buscar solo los links y detalles dentro del sidebar
+            let links = document.querySelectorAll('.sidebar-content li a');
+            let todosDetalles = document.querySelectorAll('.sidebar-content details');
+
+            if (input === '') {
+                links.forEach(link => link.parentElement.hidden = false);
+                todosDetalles.forEach(d => d.open = false);
+                return;
+            }
+            links.forEach(link => link.parentElement.hidden = true);
+            todosDetalles.forEach(d => d.open = false);
+            links.forEach(link => {
+                let texto = link.textContent.toLowerCase();
+                let id = link.id.toLowerCase();
+                if (texto.includes(input) || id.includes(input)) {
+                    let li = link.parentElement;
+                    li.hidden = false;
+                    let padre = li.closest('details');
+                    while (padre) {
+                        padre.open = true;
+                        padre = padre.parentElement ? padre.parentElement.closest('details') : null;
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
