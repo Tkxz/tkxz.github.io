@@ -1,0 +1,1443 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mapa del Liceo Bicentenario Manuel Montt</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      /* Logo integrado al encabezado para que nunca tape el contenido */
+      .marca-de-agua {
+        position: static !important;
+        top: auto !important;
+        right: auto !important;
+        width: 78px !important;
+        height: 78px;
+        object-fit: contain;
+        opacity: 1 !important;
+        flex: 0 0 auto;
+      }
+
+      .encabezado-principal {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+        border-bottom: 3px solid #ffcc00;
+        padding-bottom: 10px;
+      }
+
+      .encabezado-principal h2 {
+        margin: 0;
+        padding: 0;
+        border-bottom: 0;
+      }
+
+      @media (max-width: 640px) {
+        .encabezado-principal {
+          gap: 10px;
+          margin-bottom: 16px;
+          padding-bottom: 8px;
+        }
+
+        .marca-de-agua {
+          width: 56px !important;
+          height: 56px;
+        }
+
+        .encabezado-principal h2 {
+          font-size: 1.35rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <main class="content">
+        <div class="encabezado-principal">
+          <h2>Mapa del liceo.</h2>
+          <img
+            src="imagenes/logo1.png"
+            alt="Logo del Liceo Bicentenario Manuel Montt"
+            class="marca-de-agua"
+          />
+        </div>
+
+        <h3>
+          Zona:
+          <span id="nombre-zona" class="texto-destacado"
+            >Ninguna seleccionada</span
+          >
+        </h3>
+
+        <img
+          id="img-zona"
+          src="imagenes/mapa_liceo.png"
+          alt="Mapa del liceo"
+          width="100%"
+          height="300"
+        />
+
+        <div class="zona-inferior">
+          <h2>Descripción y cómo llegar</h2>
+          <p id="desc-zona" class="texto-descripcion">
+            Haz clic en cualquier zona del menú lateral para ver su información
+            y ubicación aquí.
+          </p>
+        </div>
+
+        <div class="mapa-externo">
+          <h2>Ubicación del liceo</h2>
+          <p>
+            Utiliza el mapa para ver la ubicación del Liceo Bicentenario Manuel
+            Montt.
+          </p>
+          <div id="map"></div>
+
+          <div class="controles-mapa">
+            <button type="button" onclick="encontrarUsuario()">
+              Encontrar mi ubicación
+            </button>
+            <button type="button" onclick="irAlLiceo()">Ver liceo</button>
+          </div>
+
+          <p id="estado-mapa">
+            Pulsa "Encontrar mi ubicación" para saber dónde estás.
+          </p>
+        </div>
+      </main>
+
+      <aside class="sidebar">
+        <div class="titulo-menu">
+          <h3>Zonas del liceo</h3>
+        </div>
+
+        <div class="sidebar-content">
+          <label for="buscador"><b>Buscar zona:</b></label>
+          <br />
+          <input
+            type="text"
+            id="buscador"
+            onkeyup="buscarZona()"
+            placeholder="Escribe nombre o ID..."
+          />
+
+          <h3 class="titulo-categorias">Categorías</h3>
+
+          <details>
+            <summary><b>Baños</b></summary>
+            <ul>
+              <li>
+                <details>
+                  <summary class="subcategoria">Baños de Hombres</summary>
+                  <ul>
+                    <li>
+                      <a
+                        id="bano-h1"
+                        href="#"
+                        data-nombre="Baño de Hombres 1"
+                        data-img="bano_h1.png"
+                        data-desc="Ubicado cerca de la sala de estructuras metálicas"
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >Baños de Hombres 1</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="bano-h2"
+                        href="#"
+                        data-nombre="Baño de Hombres 2"
+                        data-img="bano_h2.png"
+                        data-desc="Ubicado al frente del 3A y 4A."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >Baños de Hombres 2</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="bano-h3"
+                        href="#"
+                        data-nombre="Baño de Hombres 3"
+                        data-img="bano_h3.png"
+                        data-desc="Ubicado al lado de Laboratorio de electricidad"
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >Baños de Hombres 3</a
+                      >
+                    </li>
+                  </ul>
+                </details>
+              </li>
+
+              <li>
+                <details>
+                  <summary class="subcategoria">Baños de Mujeres</summary>
+                  <ul>
+                    <li>
+                      <a
+                        id="bano-m1"
+                        href="#"
+                        data-nombre="Baño de Mujeres 1"
+                        data-img="bano_m1.png"
+                        data-desc="Ubicado al lado del almacenamiento de educación física"
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >Baños de Mujeres 1</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="bano-m2"
+                        href="#"
+                        data-nombre="Baño de Mujeres 2"
+                        data-img="bano_m2.png"
+                        data-desc="Ubicado al lado del Laboratorio de programación"
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >Baños de Mujeres 2</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="bano-m3"
+                        href="#"
+                        data-nombre="Baño de Mujeres 3"
+                        data-img="bano_m3.png"
+                        data-desc="Ubicado al lado del Laboratorio de química"
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >Baños de Mujeres 3</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="bano-m4"
+                        href="#"
+                        data-nombre="Baño de Mujeres 4"
+                        data-img="bano_m4.png"
+                        data-desc="Ubicado al frente del comedor"
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >Baños de Mujeres 4</a
+                      >
+                    </li>
+                  </ul>
+                </details>
+              </li>
+            </ul>
+          </details>
+
+          <details>
+            <summary><b>Salas de Clases (Cursos)</b></summary>
+            <ul>
+              <li>
+                <details>
+                  <summary class="subcategoria">1 medio</summary>
+                  <ul>
+                    <li>
+                      <a
+                        id="sala-1a"
+                        href="#"
+                        data-nombre="Sala 1 medio A"
+                        data-img="1a.png"
+                        data-desc="Sala asignada al 1 medio A. Cuenta con proyector y climatización."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio A</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1b"
+                        href="#"
+                        data-nombre="Sala 1 medio B"
+                        data-img="1b.png"
+                        data-desc="Sala asignada al 1 medio B. Primer piso del pabellón central."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio B</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1c"
+                        href="#"
+                        data-nombre="Sala 1 medio C"
+                        data-img="1c.png"
+                        data-desc="Sala asignada al 1 medio C. Junto a la biblioteca."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio C</a
+                      >
+                    </li>
+
+                    <li>
+                      <a
+                        id="sala-1d"
+                        href="#"
+                        data-nombre="Sala 1 medio D"
+                        data-img="1d.png"
+                        data-desc="Sala asignada al 1 medio D."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio D</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1e"
+                        href="#"
+                        data-nombre="Sala 1 medio E"
+                        data-img="1e.png"
+                        data-desc="Sala asignada al 1 medio E."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio E</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1f"
+                        href="#"
+                        data-nombre="Sala 1 medio F"
+                        data-img="1f.png"
+                        data-desc="Sala asignada al 1 medio F."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio F</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1g"
+                        href="#"
+                        data-nombre="Sala 1 medio G"
+                        data-img="1g.png"
+                        data-desc="Sala asignada al 1 medio G."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio G</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1h"
+                        href="#"
+                        data-nombre="Sala 1 medio H"
+                        data-img="1h.png"
+                        data-desc="Sala asignada al 1 medio H."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio H</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1i"
+                        href="#"
+                        data-nombre="Sala 1 medio I"
+                        data-img="1i.png"
+                        data-desc="Sala asignada al 1 medio I."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio I</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1j"
+                        href="#"
+                        data-nombre="Sala 1 medio J"
+                        data-img="1j.png"
+                        data-desc="Sala asignada al 1 medio J."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio J</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1k"
+                        href="#"
+                        data-nombre="Sala 1 medio K"
+                        data-img="1k.png"
+                        data-desc="Sala asignada al 1 medio K."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio K</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-1l"
+                        href="#"
+                        data-nombre="Sala 1 medio L"
+                        data-img="1l.png"
+                        data-desc="Sala asignada al 1 medio L."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >1 medio L</a
+                      >
+                    </li>
+                  </ul>
+                </details>
+              </li>
+
+              <li>
+                <details>
+                  <summary class="subcategoria">2 medio</summary>
+                  <ul>
+                    <li>
+                      <a
+                        id="sala-2a"
+                        href="#"
+                        data-nombre="Sala 2 medio A"
+                        data-img="2a.png"
+                        data-desc="Sala asignada al 2 medio A. Pabellón B, primer piso."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio A</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2b"
+                        href="#"
+                        data-nombre="Sala 2 medio B"
+                        data-img="2b.png"
+                        data-desc="Sala asignada al 2 medio B. Pabellón B, primer piso."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio B</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2c"
+                        href="#"
+                        data-nombre="Sala 2 medio C"
+                        data-img="2c.png"
+                        data-desc="Sala asignada al 2 medio C. Pabellón B, segundo piso."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio C</a
+                      >
+                    </li>
+
+                    <li>
+                      <a
+                        id="sala-2d"
+                        href="#"
+                        data-nombre="Sala 2 medio D"
+                        data-img="2d.png"
+                        data-desc="Sala asignada al 2 medio D."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio D</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2e"
+                        href="#"
+                        data-nombre="Sala 2 medio E"
+                        data-img="2e.png"
+                        data-desc="Sala asignada al 2 medio E."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio E</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2f"
+                        href="#"
+                        data-nombre="Sala 2 medio F"
+                        data-img="2f.png"
+                        data-desc="Sala asignada al 2 medio F."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio F</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2g"
+                        href="#"
+                        data-nombre="Sala 2 medio G"
+                        data-img="2g.png"
+                        data-desc="Sala asignada al 2 medio G."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio G</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2h"
+                        href="#"
+                        data-nombre="Sala 2 medio H"
+                        data-img="2h.png"
+                        data-desc="Sala asignada al 2 medio H."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio H</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2i"
+                        href="#"
+                        data-nombre="Sala 2 medio I"
+                        data-img="2i.png"
+                        data-desc="Sala asignada al 2 medio I."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio I</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2j"
+                        href="#"
+                        data-nombre="Sala 2 medio J"
+                        data-img="2j.png"
+                        data-desc="Sala asignada al 2 medio J."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio J</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2k"
+                        href="#"
+                        data-nombre="Sala 2 medio K"
+                        data-img="2k.png"
+                        data-desc="Sala asignada al 2 medio K."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio K</a
+                      >
+                    </li>
+                    <li>
+                      <a
+                        id="sala-2l"
+                        href="#"
+                        data-nombre="Sala 2 medio L"
+                        data-img="2l.png"
+                        data-desc="Sala asignada al 2 medio L."
+                        onclick="
+                          cargarZonaPorId(this.id);
+                          return false;
+                        "
+                        >2 medio L</a
+                      >
+                    </li>
+                  </ul>
+                </details>
+              </li>
+
+              <li>
+                <details>
+                  <summary class="subcategoria">3 medio</summary>
+                  <ul>
+                    <li>
+                      <details>
+                        <summary class="subcategoria">Formación Científico Humanista</summary>
+                        <ul>
+                        <li>
+                          <a
+                            id="sala-3-cientifico"
+                            href="#"
+                            data-nombre="3 medio - Científico"
+                            data-img="mapa_liceo.png"
+                            data-desc="Formación Científico Humanista de 3 medio: Científico."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Científico</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-humanista"
+                            href="#"
+                            data-nombre="3 medio - Humanista"
+                            data-img="mapa_liceo.png"
+                            data-desc="Formación Científico Humanista de 3 medio: Humanista."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Humanista</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-pre-militar"
+                            href="#"
+                            data-nombre="3 medio - Pre-militar"
+                            data-img="mapa_liceo.png"
+                            data-desc="Formación Científico Humanista de 3 medio: Pre-militar."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Pre-militar</a
+                          >
+                        </li>
+                        </ul>
+                      </details>
+                    </li>
+
+                    <li>
+                      <details>
+                        <summary class="subcategoria">Formación Técnico Profesional</summary>
+                        <ul>
+                        <li>
+                          <a
+                            id="sala-3-contabilidad"
+                            href="#"
+                            data-nombre="3 medio - Contabilidad"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 3 medio: Contabilidad."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Contabilidad</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-administracion"
+                            href="#"
+                            data-nombre="3 medio - Administración"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 3 medio: Administración."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Administración</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-construcciones-metalicas"
+                            href="#"
+                            data-nombre="3 medio - Construcciones Metálicas"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 3 medio: Construcciones Metálicas."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Construcciones Metálicas</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-electricidad"
+                            href="#"
+                            data-nombre="3 medio - Electricidad"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 3 medio: Electricidad."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Electricidad</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-atencion-parvulos"
+                            href="#"
+                            data-nombre="3 medio - Atención de Párvulos"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 3 medio: Atención de Párvulos."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Atención de Párvulos</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-agropecuaria"
+                            href="#"
+                            data-nombre="3 medio - Agropecuaria"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 3 medio: Agropecuaria."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Agropecuaria</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-programacion"
+                            href="#"
+                            data-nombre="3 medio - Programación"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 3 medio: Programación."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Programación</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-3-gastronomia"
+                            href="#"
+                            data-nombre="3 medio - Gastronomía"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 3 medio: Gastronomía."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Gastronomía</a
+                          >
+                        </li>
+                        </ul>
+                      </details>
+                    </li>
+                  </ul>
+                </details>
+              </li>
+
+              <li>
+                <details>
+                  <summary class="subcategoria">4 medio</summary>
+                  <ul>
+                    <li>
+                      <details>
+                        <summary class="subcategoria">Formación Científico Humanista</summary>
+                        <ul>
+                        <li>
+                          <a
+                            id="sala-4-cientifico"
+                            href="#"
+                            data-nombre="4 medio - Científico"
+                            data-img="mapa_liceo.png"
+                            data-desc="Formación Científico Humanista de 4 medio: Científico."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Científico</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-humanista"
+                            href="#"
+                            data-nombre="4 medio - Humanista"
+                            data-img="mapa_liceo.png"
+                            data-desc="Formación Científico Humanista de 4 medio: Humanista."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Humanista</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-pre-militar"
+                            href="#"
+                            data-nombre="4 medio - Pre-militar"
+                            data-img="mapa_liceo.png"
+                            data-desc="Formación Científico Humanista de 4 medio: Pre-militar."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Pre-militar</a
+                          >
+                        </li>
+                        </ul>
+                      </details>
+                    </li>
+
+                    <li>
+                      <details>
+                        <summary class="subcategoria">Formación Técnico Profesional</summary>
+                        <ul>
+                        <li>
+                          <a
+                            id="sala-4-contabilidad"
+                            href="#"
+                            data-nombre="4 medio - Contabilidad"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 4 medio: Contabilidad."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Contabilidad</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-administracion"
+                            href="#"
+                            data-nombre="4 medio - Administración"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 4 medio: Administración."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Administración</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-construcciones-metalicas"
+                            href="#"
+                            data-nombre="4 medio - Construcciones Metálicas"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 4 medio: Construcciones Metálicas."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Construcciones Metálicas</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-electricidad"
+                            href="#"
+                            data-nombre="4 medio - Electricidad"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 4 medio: Electricidad."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Electricidad</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-atencion-parvulos"
+                            href="#"
+                            data-nombre="4 medio - Atención de Párvulos"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 4 medio: Atención de Párvulos."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Atención de Párvulos</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-agropecuaria"
+                            href="#"
+                            data-nombre="4 medio - Agropecuaria"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 4 medio: Agropecuaria."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Agropecuaria</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-programacion"
+                            href="#"
+                            data-nombre="4 medio - Programación"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 4 medio: Programación."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Programación</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            id="sala-4-gastronomia"
+                            href="#"
+                            data-nombre="4 medio - Gastronomía"
+                            data-img="mapa_liceo.png"
+                            data-desc="Especialidad Técnico Profesional de 4 medio: Gastronomía."
+                            onclick="
+                              cargarZonaPorId(this.id);
+                              return false;
+                            "
+                            >Gastronomía</a
+                          >
+                        </li>
+                        </ul>
+                      </details>
+                    </li>
+                  </ul>
+                </details>
+              </li>
+            </ul>
+          </details>
+
+          <details>
+            <summary><b>Oficinas</b></summary>
+            <ul>
+              <li>
+                <a
+                  id="oficina-direccion"
+                  href="#"
+                  data-nombre="Dirección"
+                  data-img="direccion.png"
+                  data-desc="Oficina de Dirección del liceo."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Dirección</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-subdireccion"
+                  href="#"
+                  data-nombre="Sub-Dirección"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina de Sub-Dirección del liceo."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Sub-Dirección</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-utp"
+                  href="#"
+                  data-nombre="UTP"
+                  data-img="mapa_liceo.png"
+                  data-desc="Unidad Técnico Pedagógica (UTP): Jefatura Técnica, Currículum, Evaluación y Coordinación TP."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >UTP</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-convivencia"
+                  href="#"
+                  data-nombre="Convivencia Escolar"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina del Encargado de Convivencia Escolar."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Convivencia Escolar</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-secretaria"
+                  href="#"
+                  data-nombre="Secretaría"
+                  data-img="secretaria.png"
+                  data-desc="Atención a apoderados y trámites documentales."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Secretaría</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-informatica"
+                  href="#"
+                  data-nombre="Área Informática"
+                  data-img="mapa_liceo.png"
+                  data-desc="Área Informática: Enlaces y soporte técnico computacional."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Área Informática</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-biblioteca-cra"
+                  href="#"
+                  data-nombre="Biblioteca / CRA"
+                  data-img="mapa_liceo.png"
+                  data-desc="Biblioteca y Centro de Recursos para el Aprendizaje (CRA)."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Biblioteca / CRA</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-acle"
+                  href="#"
+                  data-nombre="ACLE"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina de Actividades Curriculares de Libre Elección y actividades extraescolares."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >ACLE</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-pie"
+                  href="#"
+                  data-nombre="PIE"
+                  data-img="mapa_liceo.png"
+                  data-desc="Proyecto de Integración Escolar (PIE) y su equipo de apoyo."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >PIE</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-inventario"
+                  href="#"
+                  data-nombre="Inventario"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina encargada del inventario institucional."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Inventario</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-fotocopiadora"
+                  href="#"
+                  data-nombre="Fotocopiadora"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina de Fotocopiadora e Impresos."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Fotocopiadora</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-sige"
+                  href="#"
+                  data-nombre="SIGE"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina encargada del Sistema de Información General de Estudiantes (SIGE)."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >SIGE</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-camaras"
+                  href="#"
+                  data-nombre="Cámaras de Vigilancia"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina de monitoreo de cámaras de vigilancia."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Cámaras de Vigilancia</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-registros"
+                  href="#"
+                  data-nombre="Control Interno"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina de Registros de Control Interno."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Control Interno</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-alimentacion"
+                  href="#"
+                  data-nombre="Programa de Alimentación"
+                  data-img="mapa_liceo.png"
+                  data-desc="Oficina del Programa de Alimentación Escolar."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Programa de Alimentación</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-enfermeria"
+                  href="#"
+                  data-nombre="Enfermería"
+                  data-img="mapa_liceo.png"
+                  data-desc="Enfermería y Primeros Auxilios."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Enfermería</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-inspectoria"
+                  href="#"
+                  data-nombre="Inspectoría General"
+                  data-img="inspectoria.png"
+                  data-desc="Control de disciplina, asistencia y justificativos."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Inspectoría General</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-orientacion"
+                  href="#"
+                  data-nombre="Orientación"
+                  data-img="orientacion.png"
+                  data-desc="Orientación vocacional y apoyo al estudiante."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Orientación</a
+                >
+              </li>
+              <li>
+                <a
+                  id="oficina-mantencion"
+                  href="#"
+                  data-nombre="Mantención"
+                  data-img="mapa_liceo.png"
+                  data-desc="Área de mantención y reparaciones de infraestructura escolar."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Mantención</a
+                >
+              </li>
+              </li>
+            </ul>
+          </details>
+
+          <details>
+            <summary><b>Patio / Zonas de Seguridad</b></summary>
+            <ul>
+              <li>
+                <a
+                  id="Patio / Zona de seguridad"
+                  href="#"
+                  data-nombre="Cancha Techada"
+                  data-img="zona_seg_1.png"
+                  data-desc="Zona de evacuación principal ubicada en el Patio Principal."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Cancha Techada</a
+                >
+              </li>
+              <li>
+                <a
+                  id="Patio / Zona de seguridad"
+                  href="#"
+                  data-nombre="Cancha de Tierra"
+                  data-img="zona_seg_2.png"
+                  data-desc="Zona de evacuación secundaria ubicada en la Cancha de Deportes."
+                  onclick="
+                    cargarZonaPorId(this.id);
+                    return false;
+                  "
+                  >Cancha de Tierra</a
+                >
+              </li>
+            </ul>
+          </details>
+        </div>
+      </aside>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+      function cargarZonaPorId(idElemento) {
+        const elemento = document.getElementById(idElemento);
+        if (elemento) {
+          const nombre = elemento.getAttribute("data-nombre");
+          const imagen = elemento.getAttribute("data-img");
+          const descripcion = elemento.getAttribute("data-desc");
+          document.getElementById("nombre-zona").innerText = nombre;
+          document.getElementById("img-zona").src = "imagenes/" + imagen;
+          document.getElementById("desc-zona").innerText = descripcion;
+        }
+      }
+
+      function buscarZona() {
+        const input = document
+          .getElementById("buscador")
+          .value.toLowerCase()
+          .trim();
+        const links = document.querySelectorAll(".sidebar-content li a");
+        const todosDetalles = document.querySelectorAll(
+          ".sidebar-content details",
+        );
+
+        if (input === "") {
+          links.forEach((link) => (link.parentElement.hidden = false));
+          todosDetalles.forEach((d) => (d.open = false));
+          return;
+        }
+
+        links.forEach((link) => (link.parentElement.hidden = true));
+        todosDetalles.forEach((d) => (d.open = false));
+
+        links.forEach((link) => {
+          const texto = link.textContent.toLowerCase();
+          const id = link.id.toLowerCase();
+
+          if (texto.includes(input) || id.includes(input)) {
+            link.parentElement.hidden = false;
+            let padre = link.closest("details");
+
+            while (padre) {
+              padre.open = true;
+              padre = padre.parentElement
+                ? padre.parentElement.closest("details")
+                : null;
+            }
+          }
+        });
+      }
+
+      let mapa;
+      let marcadorUsuario;
+
+      const liceo = {
+        lat: -35.59832172,
+        lng: -71.72353546,
+      };
+
+      function iniciarMapa() {
+        mapa = L.map("map").setView([liceo.lat, liceo.lng], 17);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap contributors",
+        }).addTo(mapa);
+
+        const marcadorLiceo = L.marker([liceo.lat, liceo.lng]).addTo(mapa);
+
+        marcadorLiceo.bindPopup(
+          "<b>Liceo Manuel Montt</b><br>Avenida Presidente Balmaceda 1880<br>San Javier, Maule",
+        );
+
+        marcadorLiceo.openPopup();
+      }
+
+      function encontrarUsuario() {
+        const estado = document.getElementById("estado-mapa");
+
+        if (!navigator.geolocation) {
+          estado.innerText = "Tu navegador no permite obtener tu ubicación.";
+          return;
+        }
+
+        estado.innerText = "Obteniendo tu ubicación...";
+
+        navigator.geolocation.getCurrentPosition(
+          function (posicion) {
+            const lat = posicion.coords.latitude;
+            const lng = posicion.coords.longitude;
+            const ubicacion = [lat, lng];
+
+            if (marcadorUsuario) {
+              marcadorUsuario.setLatLng(ubicacion);
+            } else {
+              marcadorUsuario = L.marker(ubicacion).addTo(mapa);
+            }
+
+            marcadorUsuario.bindPopup("Estás aquí").openPopup();
+
+            mapa.setView(ubicacion, 17);
+
+            estado.innerText = "Tu ubicación fue encontrada correctamente.";
+          },
+          function (error) {
+            console.error(error);
+
+            if (error.code === 1) {
+              estado.innerText = "Debes permitir el acceso a tu ubicación.";
+            } else if (error.code === 2) {
+              estado.innerText = "No se pudo determinar tu ubicación.";
+            } else if (error.code === 3) {
+              estado.innerText =
+                "Se agotó el tiempo para obtener tu ubicación.";
+            } else {
+              estado.innerText = "Ocurrió un error obteniendo tu ubicación.";
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          },
+        );
+      }
+
+      function irAlLiceo() {
+        mapa.setView([liceo.lat, liceo.lng], 17);
+      }
+
+      // En celulares, las zonas se muestran antes del mapa de ubicación.
+      // En pantallas más grandes se conserva el diseño original.
+      const vistaMovil = window.matchMedia("(max-width: 640px)");
+      const contenedor = document.querySelector(".container");
+      const contenido = document.querySelector(".content");
+      const menuZonas = document.querySelector(".sidebar");
+      const mapaExterno = document.querySelector(".mapa-externo");
+
+      function ordenarContenidoSegunPantalla(evento) {
+        if (evento.matches) {
+          contenido.insertBefore(menuZonas, mapaExterno);
+        } else {
+          contenedor.appendChild(menuZonas);
+        }
+      }
+
+      ordenarContenidoSegunPantalla(vistaMovil);
+      vistaMovil.addEventListener("change", ordenarContenidoSegunPantalla);
+
+      // Al cerrar una categoría principal, también cerramos sus subcategorías.
+      // Así, cuando se vuelva a abrir, no queda "extendida" por el estado anterior.
+      document
+        .querySelectorAll(".sidebar-content > details")
+        .forEach((detallePrincipal) => {
+          detallePrincipal.addEventListener("toggle", () => {
+            if (!detallePrincipal.open) {
+              detallePrincipal
+                .querySelectorAll("details[open]")
+                .forEach((subdetalle) => {
+                  subdetalle.open = false;
+                });
+            }
+          });
+        });
+
+      iniciarMapa();
+    </script>
+  </body>
+</html>
