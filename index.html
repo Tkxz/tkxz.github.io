@@ -1,1362 +1,1349 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mapa del Liceo Bicentenario Manuel Montt</title>
-    <link rel="stylesheet" href="style.css" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-    <style>
-      /* Logo integrado al encabezado para que nunca tape el contenido */
-      .marca-de-agua {
-        position: static !important;
-        top: auto !important;
-        right: auto !important;
-        width: 78px !important;
-        height: 78px;
-        object-fit: contain;
-        opacity: 1 !important;
-        flex: 0 0 auto;
-      }
+ <head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>Mapa del Liceo Bicentenario Manuel Montt</title>
+ <link rel="stylesheet" href="style.css" />
+ <link
+ rel="stylesheet"
+ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+ />
+ <style>
+ /* Logo integrado al encabezado para que nunca tape el contenido */
+ .marca-de-agua {
+ position: static !important;
+ top: auto !important;
+ right: auto !important;
+ width: 78px !important;
+ height: 78px;
+ object-fit: contain;
+ opacity: 1 !important;
+ flex: 0 0 auto;
+ }
 
-      .encabezado-principal {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 18px;
-        border-bottom: 3px solid #ffcc00;
-        padding-bottom: 10px;
-      }
+ .encabezado-principal {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ gap: 16px;
+ margin-bottom: 18px;
+ border-bottom: 3px solid #ffcc00;
+ padding-bottom: 10px;
+ }
 
-      .encabezado-principal h2 {
-        margin: 0;
-        padding: 0;
-        border-bottom: 0;
-      }
+ .encabezado-principal h2 {
+ margin: 0;
+ padding: 0;
+ border-bottom: 0;
+ }
 
-      @media (max-width: 640px) {
-        .encabezado-principal {
-          gap: 10px;
-          margin-bottom: 16px;
-          padding-bottom: 8px;
-        }
+ @media (max-width: 640px) {
+ .encabezado-principal {
+ gap: 10px;
+ margin-bottom: 16px;
+ padding-bottom: 8px;
+ }
 
-        .marca-de-agua {
-          width: 56px !important;
-          height: 56px;
-        }
+ .marca-de-agua {
+ width: 56px !important;
+ height: 56px;
+ }
 
-        .encabezado-principal h2 {
-          font-size: 1.35rem;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <main class="content">
-        <div class="encabezado-principal">
-          <h2>Mapa del liceo.</h2>
-          <img
-            src="imagenes/logo1.png"
-            alt="Logo del Liceo Bicentenario Manuel Montt"
-            class="marca-de-agua"
-          />
-        </div>
+ .encabezado-principal h2 {
+ font-size: 1.35rem;
+ }
+ }
+ </style>
+ </head>
+ <body>
+ <div class="container">
+ <main class="content">
+ <div class="encabezado-principal">
+ <h2>Mapa del liceo.</h2>
+ <img
+ src="imagenes/logo1.png"
+ alt="Logo del Liceo Bicentenario Manuel Montt"
+ class="marca-de-agua"
+ />
+ </div>
 
-        <h3>
-          Zona:
-          <span id="nombre-zona" class="texto-destacado"
-            >Ninguna seleccionada</span
-          >
-        </h3>
+ <h3>
+ Zona:
+ <span id="nombre-zona" class="texto-destacado"
+ >Ninguna seleccionada</span
+ >
+ </h3>
 
-        <img
-          id="img-zona"
-          src="imagenes/logo1.png"
-          alt="Logo del liceo"
-          width="100%"
-          height="300"
-        />
+ <img
+ id="img-zona"
+ src="imagenes/logo1.png"
+ alt="Logo del liceo"
+ width="100%"
+ height="300"
+ />
 
-        <div class="zona-inferior">
-          <h2>Descripción y cómo llegar</h2>
-          <p id="desc-zona" class="texto-descripcion">
-            Haz clic en cualquier zona del menú lateral para ver su información
-            y ubicación aquí.
-          </p>
-        </div>
+ <div class="zona-inferior">
+ <h2>Descripción y cómo llegar</h2>
+ <p id="desc-zona" class="texto-descripcion">
+ Haz clic en cualquier zona del menú lateral para ver su información
+ y ubicación aquí.
+ </p>
+ </div>
 
-        <div class="mapa-externo">
-          <h2>Ubicación del liceo</h2>
-          <p>
-            Utiliza el mapa para ver la ubicación del Liceo Bicentenario Manuel
-            Montt.
-          </p>
-          <div id="map"></div>
+ <div class="mapa-externo">
+ <h2>Ubicación del liceo</h2>
+ <p>
+ Utiliza el mapa para ver la ubicación del Liceo Bicentenario Manuel
+ Montt.
+ </p>
+ <div id="map"></div>
 
-          <div class="controles-mapa">
-            <button type="button" onclick="encontrarUsuario()">
-              Encontrar mi ubicación
-            </button>
-            <button type="button" onclick="irAlLiceo()">Ver liceo</button>
-          </div>
+ <div class="controles-mapa">
+ <button type="button" onclick="encontrarUsuario()">
+ Encontrar mi ubicación
+ </button>
+ <button type="button" onclick="irAlLiceo()">Ver liceo</button>
+ </div>
 
-          <p id="estado-mapa">
-            Pulsa "Encontrar mi ubicación" para saber dónde estás.
-          </p>
-        </div>
-      </main>
+ <p id="estado-mapa">
+ Pulsa "Encontrar mi ubicación" para saber dónde estás.
+ </p>
+ </div>
+ </main>
 
-      <aside class="sidebar">
-        <div class="titulo-menu">
-          <h3>Zonas del liceo</h3>
-        </div>
+ <aside class="sidebar">
+ <div class="titulo-menu">
+ <h3>Zonas del liceo</h3>
+ </div>
 
-        <div class="sidebar-content">
-          <label for="buscador"><b>Buscar zona:</b></label>
-          <br />
-          <input
-            type="text"
-            id="buscador"
-            onkeyup="buscarZona()"
-            placeholder="Escribe nombre o ID..."
-          />
+ <div class="sidebar-content">
+ <label for="buscador"><b>Buscar zona:</b></label>
+ <br />
+ <input
+ type="text"
+ id="buscador"
+ onkeyup="buscarZona()"
+ placeholder="Escribe nombre o ID..."
+ />
 
-          <h3 class="titulo-categorias">Categorías</h3>
+ <h3 class="titulo-categorias">Categorías</h3>
 
-                    <details>
-            <summary><b>Salas de clases</b></summary>
-            <ul>
-              <li>
-                <a
-                  id="zona-1a"
-                  href="#"
-                  data-nombre="1° medio A"
-                  data-img="1°A.jpeg"
-                  data-desc="Imagen de 1° medio A."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio A</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1b"
-                  href="#"
-                  data-nombre="1° medio B"
-                  data-img="1°B.jpeg"
-                  data-desc="Imagen de 1° medio B."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio B</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1d"
-                  href="#"
-                  data-nombre="1° medio D"
-                  data-img="1°D.jpeg"
-                  data-desc="Imagen de 1° medio D."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio D</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1e"
-                  href="#"
-                  data-nombre="1° medio E"
-                  data-img="1°E.jpeg"
-                  data-desc="Imagen de 1° medio E."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio E</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1f"
-                  href="#"
-                  data-nombre="1° medio F"
-                  data-img="1°F.jpeg"
-                  data-desc="Imagen de 1° medio F."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio F</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1g"
-                  href="#"
-                  data-nombre="1° medio G"
-                  data-img="1°G.jpeg"
-                  data-desc="Imagen de 1° medio G."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio G</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1h"
-                  href="#"
-                  data-nombre="1° medio H"
-                  data-img="1°H.jpeg"
-                  data-desc="Imagen de 1° medio H."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio H</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1-i"
-                  href="#"
-                  data-nombre="1° medio I"
-                  data-img="1°_i_.jpeg"
-                  data-desc="Imagen de 1° medio I."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio I</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1j"
-                  href="#"
-                  data-nombre="1° medio J"
-                  data-img="1°J.jpeg"
-                  data-desc="Imagen de 1° medio J."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio J</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1k"
-                  href="#"
-                  data-nombre="1° medio K"
-                  data-img="1°k.jpeg"
-                  data-desc="Imagen de 1° medio K."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio K</a>
-              </li>
-              <li>
-                <a
-                  id="zona-1l"
-                  href="#"
-                  data-nombre="1° medio L"
-                  data-img="1°L.jpeg"
-                  data-desc="Imagen de 1° medio L."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >1° medio L</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2a"
-                  href="#"
-                  data-nombre="2° medio A"
-                  data-img="2°A.jpeg"
-                  data-desc="Imagen de 2° medio A."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio A</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2b"
-                  href="#"
-                  data-nombre="2° medio B"
-                  data-img="2°B.jpeg"
-                  data-desc="Imagen de 2° medio B."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio B</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2c"
-                  href="#"
-                  data-nombre="2° medio C"
-                  data-img="2°C.jpeg"
-                  data-desc="Imagen de 2° medio C."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio C</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2d"
-                  href="#"
-                  data-nombre="2° medio D"
-                  data-img="2°D.jpeg"
-                  data-desc="Imagen de 2° medio D."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio D</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2f"
-                  href="#"
-                  data-nombre="2° medio F"
-                  data-img="2°F.jpeg"
-                  data-desc="Imagen de 2° medio F."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio F</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2g"
-                  href="#"
-                  data-nombre="2° medio G"
-                  data-img="2°G.jpeg"
-                  data-desc="Imagen de 2° medio G."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio G</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2h"
-                  href="#"
-                  data-nombre="2° medio H"
-                  data-img="2°H.jpeg"
-                  data-desc="Imagen de 2° medio H."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio H</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2-i"
-                  href="#"
-                  data-nombre="2° medio I"
-                  data-img="2°_i.jpeg"
-                  data-desc="Imagen de 2° medio I."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio I</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2-j"
-                  href="#"
-                  data-nombre="2° medio J"
-                  data-img="2°_J.jpeg"
-                  data-desc="Imagen de 2° medio J."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio J</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2k"
-                  href="#"
-                  data-nombre="2° medio K"
-                  data-img="2°K.jpeg"
-                  data-desc="Imagen de 2° medio K."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio K</a>
-              </li>
-              <li>
-                <a
-                  id="zona-2l"
-                  href="#"
-                  data-nombre="2° medio L"
-                  data-img="2°L.jpeg"
-                  data-desc="Imagen de 2° medio L."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >2° medio L</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3a"
-                  href="#"
-                  data-nombre="3° medio A"
-                  data-img="3°A.jpeg"
-                  data-desc="Imagen de 3° medio A."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio A</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3b"
-                  href="#"
-                  data-nombre="3° medio B"
-                  data-img="3°B.jpeg"
-                  data-desc="Imagen de 3° medio B."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio B</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3c"
-                  href="#"
-                  data-nombre="3° medio C"
-                  data-img="3°C.jpeg"
-                  data-desc="Imagen de 3° medio C."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio C</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3d"
-                  href="#"
-                  data-nombre="3° medio D"
-                  data-img="3°D.jpeg"
-                  data-desc="Imagen de 3° medio D."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio D</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3e"
-                  href="#"
-                  data-nombre="3° medio E"
-                  data-img="3°E.jpeg"
-                  data-desc="Imagen de 3° medio E."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio E</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3f-y-4-f"
-                  href="#"
-                  data-nombre="3° y 4° medio F"
-                  data-img="3°F_y_4°_F.jpeg"
-                  data-desc="Imagen de 3° y 4° medio F."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° y 4° medio F</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3h"
-                  href="#"
-                  data-nombre="3° medio H"
-                  data-img="3°H.jpeg"
-                  data-desc="Imagen de 3° medio H."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio H</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3-i"
-                  href="#"
-                  data-nombre="3° medio I"
-                  data-img="3°_i.jpeg"
-                  data-desc="Imagen de 3° medio I."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio I</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3j"
-                  href="#"
-                  data-nombre="3° medio J"
-                  data-img="3°J.jpeg"
-                  data-desc="Imagen de 3° medio J."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio J</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3k"
-                  href="#"
-                  data-nombre="3° medio K"
-                  data-img="3°K.jpeg"
-                  data-desc="Imagen de 3° medio K."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio K</a>
-              </li>
-              <li>
-                <a
-                  id="zona-3l"
-                  href="#"
-                  data-nombre="3° medio L"
-                  data-img="3°L.jpeg"
-                  data-desc="Imagen de 3° medio L."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >3° medio L</a>
-              </li>
-              <li>
-                <a
-                  id="zona-4a"
-                  href="#"
-                  data-nombre="4° medio A"
-                  data-img="4°A.jpeg"
-                  data-desc="Imagen de 4° medio A."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >4° medio A</a>
-              </li>
-              <li>
-                <a
-                  id="zona-4b"
-                  href="#"
-                  data-nombre="4° medio B"
-                  data-img="4°B.jpeg"
-                  data-desc="Imagen de 4° medio B."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >4° medio B</a>
-              </li>
-              <li>
-                <a
-                  id="zona-4e"
-                  href="#"
-                  data-nombre="4° medio E"
-                  data-img="4°E.jpeg"
-                  data-desc="Imagen de 4° medio E."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >4° medio E</a>
-              </li>
-              <li>
-                <a
-                  id="zona-4h"
-                  href="#"
-                  data-nombre="4° medio H"
-                  data-img="4°H.jpeg"
-                  data-desc="Imagen de 4° medio H."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >4° medio H</a>
-              </li>
-              <li>
-                <a
-                  id="zona-4j"
-                  href="#"
-                  data-nombre="4° medio J"
-                  data-img="4°J.jpeg"
-                  data-desc="Imagen de 4° medio J."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >4° medio J</a>
-              </li>
-              <li>
-                <a
-                  id="zona-4k"
-                  href="#"
-                  data-nombre="4° medio K"
-                  data-img="4°K.jpeg"
-                  data-desc="Imagen de 4° medio K."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >4° medio K</a>
-              </li>
-              <li>
-                <a
-                  id="zona-4l"
-                  href="#"
-                  data-nombre="4° medio L"
-                  data-img="4°L.jpeg"
-                  data-desc="Imagen de 4° medio L."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >4° medio L</a>
-              </li>
-            </ul>
-          </details>
+ <details>
+ <summary><b>Salas de clases</b></summary>
+ <ul>
+ <li>
+ <a
+ id="zona-1a"
+ href="#"
+ data-nombre="1° medio A"
+ data-img="1°A.jpeg"
+ data-desc="Sala de estudio del Primero Medio A Ubicada en el primer piso siguiendo recto donde se encuentra inspectoría general"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio A</a>
+ </li>
+ <li>
+ <a
+ id="zona-1b"
+ href="#"
+ data-nombre="1° medio B"
+ data-img="1°B.jpeg"
+ data-desc="Sala de estudio Primero Medio B Ubicada al lado del Primero A en el primer piso siguiendo recto donde se encuentra inspectoría general
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio B</a>
+ </li>
+ <li>
+ <a
+ id="zona-1d"
+ href="#"
+ data-nombre="1° medio D"
+ data-img="1°D.jpeg"
+ data-desc="Sala de estudio Primero D ubicada en la entrada de principal donde entran todos los alumnos al frente del 4°H"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio D</a>
+ </li>
+ <li>
+ <a
+ id="zona-1e"
+ href="#"
+ data-nombre="1° medio E"
+ data-img="1°E.jpeg"
+ data-desc="Sala de estudio Primero Medio E Ubicada todo recto de la entrada principal donde entran los alumnos, también frente a la mini lugar recreativo donde están las bancas."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio E</a>
+ </li>
+ <li>
+ <a
+ id="zona-1f"
+ href="#"
+ data-nombre="1° medio F"
+ data-img="1°F.jpeg"
+ data-desc="Sala de estudio Primero medio F Ubicada al frente de la entrada principal donde entran los alumnos mejor dicho dentro donde se encuentra la reja"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio F</a>
+ </li>
+ <li>
+ <a
+ id="zona-1g"
+ href="#"
+ data-nombre="1° medio G"
+ data-img="1°G.jpeg"
+ data-desc="Sala de estudio primero G Ubicada al frente de la entrada principal donde entran los alumnos también mejor reconocida al frente del kiosco del liceo"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio G</a>
+ </li>
+ <li>
+ <a
+ id="zona-1h"
+ href="#"
+ data-nombre="1° medio H"
+ data-img="1°H.jpeg"
+ data-desc="Sala de estudio Primero H Ubicada al frente de la entrada principal donde entran los alumnos para mayor referencia dentro de la reja y seguir recto por el mismo camino de la reja"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio H</a>
+ </li>
+ <li>
+ <a
+ id="zona-1-i"
+ href="#"
+ data-nombre="1° medio I"
+ data-img="1°_i_.jpeg"
+ data-desc="Sala de estudio Primero medio I Ubicada al frente de la entrada principal donde entran los alumnos Punto de referencia al frente del kiosco del liceo "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio I</a>
+ </li>
+ <li>
+ <a
+ id="zona-1j"
+ href="#"
+ data-nombre="1° medio J"
+ data-img="1°J.jpeg"
+ data-desc="Sala de estudio Primero Medio J Ubicada al frente de la entrada principal donde entran los alumnos más exactos dentro del pasillo donde se encuentra la reja debe seguir recto "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio J</a>
+ </li>
+ <li>
+ <a
+ id="zona-1k"
+ href="#"
+ data-nombre="1° medio K"
+ data-img="1°k.jpeg"
+ data-desc="Sala de estudio Primero medio K Ubicada al frente de la entrada principal donde entran los alumnos más exactos dentro del pasillo donde se encuentra la reja debe seguir rectos "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio K</a>
+ </li>
+ <li>
+ <a
+ id="zona-1l"
+ href="#"
+ data-nombre="1° medio L"
+ data-img="1°L.jpeg"
+ data-desc="sala de estudio primero medio L Ubicada al frente de la entrada principal donde entran los alumnos más exactos dentro del pasillo donde se encuentra la reja debe seguir recto"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >1° medio L</a>
+ </li>
+ <li>
+ <a
+ id="zona-2a"
+ href="#"
+ data-nombre="2° medio A"
+ data-img="2°A.jpeg"
+ data-desc="Sala de estudio del segundo medio A Ubicada en el segundo piso siguiendo recto inspectoría general, subiendo la escalera y siguiendo el pasillo a mano izquierda es la primera sala"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio A</a>
+ </li>
+ <li>
+ <a
+ id="zona-2b"
+ href="#"
+ data-nombre="2° medio B"
+ data-img="2°B.jpeg"
+ data-desc="Sala de estudio de segundo medio B ubicada recto de inspectoría general suba por las escaleras al lado del segundo medio A se encuentra "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio B</a>
+ </li>
+ <li>
+ <a
+ id="zona-2c"
+ href="#"
+ data-nombre="2° medio C"
+ data-img="2°C.jpeg"
+ data-desc="Sala de estudio de segundo medio C Ubicada en el segundo piso debe seguir recto por inspectoría general tomar la escalera para subir y al lado de la caseta de la inspectora de pasillo estará la sala"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio C</a>
+ </li>
+ <li>
+ <a
+ id="zona-2d"
+ href="#"
+ data-nombre="2° medio D"
+ data-img="2°D.jpeg"
+ data-desc="Sala de estudio segundo medio D ubicada en el segundo piso tomando la escalera que está recto de inspectoría general y al lado de la caseta de la inspectora de pasillo está a mano izquierda de la caseta"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio D</a>
+ </li>
+ <li>
+ <a
+ id="zona-2f"
+ href="#"
+ data-nombre="2° medio F"
+ data-img="2°F.jpeg"
+ data-desc="sala de estudio segundo medio F ubicada siguiendo las escaleras donde se encuentra el baño número 3 de varones arriba a mano derecha estará la sala"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio F</a>
+ </li>
+ <li>
+ <a
+ id="zona-2g"
+ href="#"
+ data-nombre="2° medio G"
+ data-img="2°G.jpeg"
+ data-desc="sala de estudio segundo medio G ubicada siguiendo las escaleras donde se encuentra el baño número 3 de varones arriba a mano derecha estará la sala al lado del segundo F"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio G</a>
+ </li>
+ <li>
+ <a
+ id="zona-2h"
+ href="#"
+ data-nombre="2° medio H"
+ data-img="2°H.jpeg"
+ data-desc="Sala de estudio segundo medio H Ubicada siguiendo donde se encuentra el pasillo de construcciones metálicas siguiendo todo recto"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio H</a>
+ </li>
+ <li>
+ <a
+ id="zona-2-i"
+ href="#"
+ data-nombre="2° medio I"
+ data-img="2°_i.jpeg"
+ data-desc="Sala de estudio segundo medio I ubicada siguiendo recto el pasillo de construcciones acercándose a la caseta del inspector de pasillo"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio I</a>
+ </li>
+ <li>
+ <a
+ id="zona-2-j"
+ href="#"
+ data-nombre="Sala de estudio segundo medio J ubicada en el primero piso todo recto de inspectoria general doblando a mano derecha al lado de la caseta del inspector de pasillo"
+ data-img="2°_J.jpeg"
+ data-desc="Imagen de 2° medio J."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio J</a>
+ </li>
+ <li>
+ <a
+ id="zona-2k"
+ href="#"
+ data-nombre="2° medio K"
+ data-img="2°K.jpeg"
+ data-desc="Sala de estudio segundo medio K ubicada en el primero pasillo todo recto de inspectoría general en el primer piso todo recto al lado de la caseta del inspector de pasillo"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio K</a>
+ </li>
+ <li>
+ <a
+ id="zona-2l"
+ href="#"
+ data-nombre="2° medio L"
+ data-img="2°L.jpeg"
+ data-desc="Sala de estudio segundo medio L ubicada todo recto de inspectoría general subir las escaleras a mano derecha al lado de informaciones estará la sala"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >2° medio L</a>
+ </li>
+ <li>
+ <a
+ id="zona-3a"
+ href="#"
+ data-nombre="3° medio A"
+ data-img="3°A.jpeg"
+ data-desc="Sala de los científicos 3 medio ubicada siguiendo recto del patio techado caminando derecho al lado de las gradas doblando a mano derecha del antiguo kiosco del liceo (uno verde) en el primero pasillo cerca de la caseta de la inspectora de pasillo todo recto de los baños número 1"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio A</a>
+ </li>
+ <li>
+ <a
+ id="zona-3b"
+ href="#"
+ data-nombre="3° medio B"
+ data-img="3°B.jpeg"
+ data-desc="Sala de los humanistas 3 medio B ubicada todo recto del patio techado siguiendo las gradas al lado de la mesa de ping pong encontrará la sala al lado de una reja que llega a verse el patio de tierra"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio B</a>
+ </li>
+ <li>
+ <a
+ id="zona-3c"
+ href="#"
+ data-nombre="3° medio C"
+ data-img="3°C.jpeg"
+ data-desc="Sala de los humanista 3 medio C ubicada todo recto de inspectoría general en el primer pasillo al lado de la caseta del inspector de pasillo"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio C</a>
+ </li>
+ <li>
+ <a
+ id="zona-3d"
+ href="#"
+ data-nombre="3° medio D"
+ data-img="3°D.jpeg"
+ data-desc="Sala de administración 3 medio D ubicada todo recto siguiendo el patio techado guiándote de la gradas llegará al kiosco antiguo del liceo (uno verde) gire a mano derecha y estará al lado del 3 medio A"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio D</a>
+ </li>
+ <li>
+ <a
+ id="zona-3e"
+ href="#"
+ data-nombre="3° medio E"
+ data-img="3°E.jpeg"
+ data-desc="Sala de contabilidad 3 medio E ubicada siguiendo el patio techado guiándote cerca del escenario todo recto pasará por unos baños de mujeres y verá una mini zona recreativa con árboles y verá un portón (electricidad) al lado del portón pintado verá la sala"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio E</a>
+ </li>
+ <li>
+ <a
+ id="zona-3f-y-4-f"
+ href="#"
+ data-nombre="3° y 4° medio F"
+ data-img="3°F_y_4°_F.jpeg"
+ data-desc="Sala de programación 3 y 4 medios ubicada todo recto de inspectoría general subiendo las escaleras a mano derecha entre biblioteca y 2 medio L verán la sala"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° y 4° medio F</a>
+ </li>
+ <li>
+ <a
+ id="zona-3h"
+ href="#"
+ data-nombre="3° medio H"
+ data-img="3°H.jpeg"
+ data-desc="Sala de electricidad 3 medio ubicada siguiendo recto del patio techado caminando derecho al lado de las gradas doblando a mano derecha del antiguo kiosco del liceo (uno verde) en el primero pasillo cerca de la caseta de la inspectora de pasillo todo recto de los baños número 1 es la primera sala"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio H</a>
+ </li>
+ <li>
+ <a
+ id="zona-3-i"
+ href="#"
+ data-nombre="3° medio I"
+ data-img="3°_i.jpeg"
+ data-desc="Sala de párvulo 3 medio I ubicada siguiendo el patio techado guiándote cerca del escenario todo recto pasará por unos baños de mujeres y verá una mini zona recreativa con árboles al lado de la caseta de la inspectora estará la sala"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio I</a>
+ </li>
+ <li>
+ <a
+ id="zona-3j"
+ href="#"
+ data-nombre="3° medio J"
+ data-img="3°J.jpeg"
+ data-desc="Sala de construcciones metálicas 3 medio J ubicada siguiendo recto el patio techado siguiendo las gradas y verán una caseta de inspectora de pasillo siguiendo derecho estará el baño de hombre y todo recto estará la sala "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio J</a>
+ </li>
+ <li>
+ <a
+ id="zona-3k"
+ href="#"
+ data-nombre="3° medio K"
+ data-img="3°K.jpeg"
+ data-desc="Sala de Agropecuaria 3 medio K ubicada ubicada siguiendo recto el patio techado siguiendo las gradas y verán una caseta de inspectora de pasillo siguiendo derecho estará el baño de hombre y todo recto estará la sala la lado de la sala de construcciones metálicas "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio K</a>
+ </li>
+ <li>
+ <a
+ id="zona-3l"
+ href="#"
+ data-nombre="3° medio L"
+ data-img="3°L.jpeg"
+ data-desc="Sala de premilitar 3 medio L ubicada todo recto del patio techado guiándote con las gradas doblando a mano derecha suba las escalera siga todo recto "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >3° medio L</a>
+ </li>
+ <li>
+ <a
+ id="zona-4a"
+ href="#"
+ data-nombre="4° medio A"
+ data-img="4°A.jpeg"
+ data-desc="Imagen de 4° medio A carrera de científico que se encuentra en en segundo piso del antiguo quiosco suba la escalera y encontrará el 4°A al frente de el baño de mujeres."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >4° medio A</a>
+ </li>
+ <li>
+ <a
+ id="zona-4b"
+ href="#"
+ data-nombre="4° medio B"
+ data-img="4°B.jpeg"
+ data-desc="Imagen de 4° medio B sala de humanista que está al frente del baño de hombres y de las mesas de ping pong."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >4° medio B</a>
+ </li>
+ <li>
+ <a
+ id="zona-4e"
+ href="#"
+ data-nombre="4° medio E"
+ data-img="4°E.jpeg"
+ data-desc="Imagen de 4° medio E carrera de contabilidad que está cerca de la zona de párvulo y al lado de los baños, al frente del 4°I"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >4° medio E</a>
+ </li>
+ <li>
+ <a
+ id="zona-4h"
+ href="#"
+ data-nombre="4° medio H"
+ data-img="4°H.jpeg"
+ data-desc="Imagen de 4° medio H carrera de electricidad, está al principio de donde entran los alumnos en el portón de los buses."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >4° medio H</a>
+ </li>
+ <li>
+ <a
+ id="zona-4j"
+ href="#"
+ data-nombre="4° medio J"
+ data-img="4°J.jpeg"
+ data-desc="Imagen de 4° medio J carrera de construcciones metálicas ubicada siguiendo recto el patio techado siguiendo las gradas y verán una caseta de inspectora de pasillo siguiendo derecho estará el baño de hombre y todo recto estará la sala ."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >4° medio J</a>
+ </li>
+ <li>
+ <a
+ id="zona-4k"
+ href="#"
+ data-nombre="4° medio K"
+ data-img="4°K.jpeg"
+ data-desc="Imagen de 4° medio K carrera de Agropecuaria ubicada siguiendo recto el patio techado siguiendo las gradas y verán una caseta de inspectora de pasillo siguiendo derecho estará el baño de hombre y todo recto estará la sala y está al lado del curso de 3° de agropecuaria."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >4° medio K</a>
+ </li>
+ <li>
+ <a
+ id="zona-4l"
+ href="#"
+ data-nombre="4° medio L"
+ data-img="4°L.jpeg"
+ data-desc="Sala de premilitar 4 medio L ubicada en el segundo piso donde está el antiguo kiosco suba la escalera siga recto de los baño de mujeres y estará al lado del 3 medio L"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >4° medio L</a>
+ </li>
+ </ul>
+ </details>
 
-          <details>
-            <summary><b>Baños y camarines</b></summary>
-            <ul>
-              <li>
-                <a
-                  id="zona-bano-de-hombres1"
-                  href="#"
-                  data-nombre="Baño de hombres 1"
-                  data-img="baño_de_hombres1.jpg"
-                  data-desc="Imagen de Baño de hombres 1."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Baño de hombres 1</a>
-              </li>
-              <li>
-                <a
-                  id="zona-bano-de-hombres2"
-                  href="#"
-                  data-nombre="Baño de hombres 2"
-                  data-img="baño_de_hombres2.jpg"
-                  data-desc="Imagen de Baño de hombres 2."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Baño de hombres 2</a>
-              </li>
-              <li>
-                <a
-                  id="zona-bano-de-hombres3"
-                  href="#"
-                  data-nombre="Baño de hombres 3"
-                  data-img="baño_de_hombres3.jpg"
-                  data-desc="Imagen de Baño de hombres 3."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Baño de hombres 3</a>
-              </li>
-              <li>
-                <a
-                  id="zona-bano-de-mujeres1"
-                  href="#"
-                  data-nombre="Baño de mujeres 1"
-                  data-img="baño_de_mujeres1.jpg"
-                  data-desc="Imagen de Baño de mujeres 1."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Baño de mujeres 1</a>
-              </li>
-              <li>
-                <a
-                  id="zona-bano-de-mujeres2"
-                  href="#"
-                  data-nombre="Baño de mujeres 2"
-                  data-img="baño_de_mujeres2.jpg"
-                  data-desc="Imagen de Baño de mujeres 2."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Baño de mujeres 2</a>
-              </li>
-              <li>
-                <a
-                  id="zona-bano-de-mujeres-3"
-                  href="#"
-                  data-nombre="Baño de mujeres 3"
-                  data-img="baño_de_mujeres_3.jpg"
-                  data-desc="Imagen de Baño de mujeres 3."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Baño de mujeres 3</a>
-              </li>
-              <li>
-                <a
-                  id="zona-bano-de-mujeres-4"
-                  href="#"
-                  data-nombre="Baño de mujeres 4"
-                  data-img="baño_de_mujeres_4.jpg"
-                  data-desc="Imagen de Baño de mujeres 4."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Baño de mujeres 4</a>
-              </li>
-              <li>
-                <a
-                  id="zona-camarine-mujeres1"
-                  href="#"
-                  data-nombre="Camarín de mujeres 1"
-                  data-img="camarine_mujeres1.jpg"
-                  data-desc="Imagen de Camarín de mujeres 1."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Camarín de mujeres 1</a>
-              </li>
-              <li>
-                <a
-                  id="zona-camarin-mujeres2"
-                  href="#"
-                  data-nombre="Camarín de mujeres 2"
-                  data-img="camarin_mujeres2.jpg"
-                  data-desc="Imagen de Camarín de mujeres 2."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Camarín de mujeres 2</a>
-              </li>
-            </ul>
-          </details>
+ <details>
+ <summary><b>Baños y camarines</b></summary>
+ <ul>
+ <li>
+ <a
+ id="zona-bano-de-hombres1"
+ href="#"
+ data-nombre="Baño de hombres 1"
+ data-img="baño_de_hombres1.jpg"
+ data-desc="Baño de hombres que se encuentra al lado de el laboratorio de electricidad."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Baño de hombres 1</a>
+ </li>
+ <li>
+ <a
+ id="zona-bano-de-hombres2"
+ href="#"
+ data-nombre="Baño de hombres 2"
+ data-img="baño_de_hombres2.jpg"
+ data-desc="Imagen de Baño de hombres que se encuentra al lado de las mesas de ping pong y al frente de las salas humanista."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Baño de hombres 2</a>
+ </li>
+ <li>
+ <a
+ id="zona-bano-de-hombres3"
+ href="#"
+ data-nombre="Baño de hombres 3"
+ data-img="baño_de_hombres3.jpg"
+ data-desc="Baño de hombres que se encuentra al lado de el laboratorio de construcciones metálicas"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Baño de hombres 3</a>
+ </li>
+ <li>
+ <a
+ id="zona-bano-de-mujeres1"
+ href="#"
+ data-nombre="Baño de mujeres 1"
+ data-img="baño_de_mujeres1.jpg"
+ data-desc="Baño de mujeres ubicado al lado de la sala de programación"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Baño de mujeres 1</a>
+ </li>
+ <li>
+ <a
+ id="zona-bano-de-mujeres2"
+ href="#"
+ data-nombre="Baño de mujeres 2"
+ data-img="baño_de_mujeres2.jpg"
+ data-desc="Baño de mujeres ubicado al lado del almacén del equipo de educación física"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Baño de mujeres 2</a>
+ </li>
+ <li>
+ <a
+ id="zona-bano-de-mujeres-3"
+ href="#"
+ data-nombre="Baño de mujeres 3"
+ data-img="baño_de_mujeres_3.jpg"
+ data-desc="baño de mujeres al lado del de la sala del laboratorio de ciencias se encuentra en el segundo piso"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Baño de mujeres 3</a>
+ </li>
+ <li>
+ <a
+ id="zona-bano-de-mujeres-4"
+ href="#"
+ data-nombre="Baño de mujeres 4"
+ data-img="baño_de_mujeres_4.jpg"
+ data-desc="Baño de mujeres frente al comedor en un container ubicado cerca en el patio de tierra"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Baño de mujeres 4</a>
+ </li>
+ <li>
+ <a
+ id="zona-camarine-mujeres1"
+ href="#"
+ data-nombre="Camarín de mujeres 1"
+ data-img="camarine_mujeres1.jpg"
+ data-desc="camarín de mujeres ubicado cerca de la cancha principal en una esquina se encuentra cerca de donde inician las gradas"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Camarín de mujeres 1</a>
+ </li>
+ <li>
+ <a
+ id="zona-camarin-mujeres2"
+ href="#"
+ data-nombre="Camarín de mujeres 2"
+ data-img="camarin_mujeres2.jpg"
+ data-desc="camarín de mujeres ubicado cerca de la cancha principal en una esquina se encuentra cerca de donde inician las gradas al lado del camarín de mujeres número 1"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Camarín de mujeres 2</a>
+ </li>
+ </ul>
+ </details>
 
-          <details>
-            <summary><b>Oficinas y servicios</b></summary>
-            <ul>
-              <li>
-                <a
-                  id="zona-biblioteca"
-                  href="#"
-                  data-nombre="Biblioteca"
-                  data-img="biblioteca.jpg"
-                  data-desc="Imagen de Biblioteca."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Biblioteca</a>
-              </li>
-              <li>
-                <a
-                  id="zona-cafeteria"
-                  href="#"
-                  data-nombre="Cafetería"
-                  data-img="cafeteria.jpg"
-                  data-desc="Imagen de Cafetería."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Cafetería</a>
-              </li>
-              <li>
-                <a
-                  id="zona-centro-de-padres"
-                  href="#"
-                  data-nombre="Centro de padres"
-                  data-img="centro_de_padres.jpg"
-                  data-desc="Imagen de Centro de padres."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Centro de padres</a>
-              </li>
-              <li>
-                <a
-                  id="zona-estacionamiento-de-profesores"
-                  href="#"
-                  data-nombre="Estacionamiento de profesores"
-                  data-img="estacionamiento_de_profesores.jpg"
-                  data-desc="Imagen de Estacionamiento de profesores."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Estacionamiento de profesores</a>
-              </li>
-              <li>
-                <a
-                  id="zona-inspectoria-general"
-                  href="#"
-                  data-nombre="Inspectoría general"
-                  data-img="inspectoria_general.jpg"
-                  data-desc="Imagen de Inspectoría general."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Inspectoría general</a>
-              </li>
-              <li>
-                <a
-                  id="zona-sala-de-contencion"
-                  href="#"
-                  data-nombre="Sala de contención"
-                  data-img="sala_de_contencion.jpg"
-                  data-desc="Imagen de Sala de contención."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Sala de contención</a>
-              </li>
-              <li>
-                <a
-                  id="zona-informatica"
-                  href="#"
-                  data-nombre="Sala de informática"
-                  data-img="informatica.jpg"
-                  data-desc="Imagen de Sala de informática."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Sala de informática</a>
-              </li>
-              <li>
-                <a
-                  id="zona-sala-de-primeros-auxilios"
-                  href="#"
-                  data-nombre="Sala de primeros auxilios"
-                  data-img="sala_de_primeros_auxilios.jpg"
-                  data-desc="Imagen de Sala de primeros auxilios."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Sala de primeros auxilios</a>
-              </li>
-            </ul>
-          </details>
+ <details>
+ <summary><b>Oficinas y servicios</b></summary>
+ <ul>
+ <li>
+ <a
+ id="zona-biblioteca"
+ href="#"
+ data-nombre="Biblioteca"
+ data-img="biblioteca.jpg"
+ data-desc="Biblioteca única ubicada en el segundo piso siguiendo recto inspectoría general subiendo las escaleras y doblando a mano derecha al lado de la sala de 3 y 4 medio F"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Biblioteca</a>
+ </li>
+ <li>
+ <a
+ id="zona-cafeteria"
+ href="#"
+ data-nombre="Cafetería"
+ data-img="cafeteria.jpg"
+ data-desc="Cafetería de profesores ubicada todo recto de la entrada principal de alumnos verá contención y cafetería estará al frente"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Cafetería</a>
+ </li>
+ <li>
+ <a
+ id="zona-centro-de-padres"
+ href="#"
+ data-nombre="Centro de padres"
+ data-img="centro_de_padres.jpg"
+ data-desc="Centro de padres ubicada todo recto de la entrada principal de los alumnos verá un muro con un panel donde se pegan carteles y estará al frente de enfermería"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Centro de padres</a>
+ </li>
+ <li>
+ <a
+ id="zona-estacionamiento-de-profesores"
+ href="#"
+ data-nombre="Estacionamiento de profesores"
+ data-img="estacionamiento_de_profesores.jpg"
+ data-desc="Estacionamiento de profesores ubicado exactamente en la cancha de tierra ubicado en la parte posterior y a una esquina"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Estacionamiento de profesores</a>
+ </li>
+ <li>
+ <a
+ id="zona-inspectoria-general"
+ href="#"
+ data-nombre="Inspectoría general"
+ data-img="inspectoria_general.jpg"
+ data-desc="Inspectoría general ubicada todo recto de la entrada principal de los alumnos a mano derecha estará inspectoría general 
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Inspectoría general</a>
+ </li>
+ <li>
+ <a
+ id="zona-sala-de-contencion"
+ href="#"
+ data-nombre="Sala de contención"
+ data-img="sala_de_contencion.jpg"
+ data-desc="Sala de contención ubicada todo recto de la entrada principal de los alumnos a mano izquierda al frente de la cafetería"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Sala de contención</a>
+ </li>
+ <li>
+ <a
+ id="zona-informatica"
+ href="#"
+ data-nombre="Sala de informática"
+ data-img="informatica.jpg"
+ data-desc="Sala de informática (solo profe Fernando) estará ubicada todo recto de inspectoría general suba las escaleras y a mano derecha estará"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Sala de informática</a>
+ </li>
+ <li>
+ <a
+ id="zona-sala-de-primeros-auxilios"
+ href="#"
+ data-nombre="Sala de primeros auxilios"
+ data-img="sala_de_primeros_auxilios.jpg"
+ data-desc="Enfermería ubicada todo recto de la entrada principal de los alumnos al frente de centro de padres"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Sala de primeros auxilios</a>
+ </li>
+ </ul>
+ </details>
 
-          <details>
-            <summary><b>Laboratorios, salas y talleres</b></summary>
-            <ul>
-              <li>
-                <a
-                  id="zona-almacen-de-equipo-de-edu-fisica"
-                  href="#"
-                  data-nombre="Almacén de equipo de educación física"
-                  data-img="almacen_de_equipo_de_edu_fisica.jpg"
-                  data-desc="Imagen de Almacén de equipo de educación física."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Almacén de equipo de educación física</a>
-              </li>
-              <li>
-                <a
-                  id="zona-laboratorio-de-ciencias"
-                  href="#"
-                  data-nombre="Laboratorio de ciencias"
-                  data-img="laboratorio_de_ciencias.jpg"
-                  data-desc="Imagen de Laboratorio de ciencias."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Laboratorio de ciencias</a>
-              </li>
-              <li>
-                <a
-                  id="zona-laboratorio-computacion-n1"
-                  href="#"
-                  data-nombre="Laboratorio de computación N.º 1"
-                  data-img="laboratorio_computacion_N°1.jpg"
-                  data-desc="Imagen de Laboratorio de computación N.º 1."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Laboratorio de computación N.º 1</a>
-              </li>
-              <li>
-                <a
-                  id="zona-laboratorio-de-electricidad"
-                  href="#"
-                  data-nombre="Laboratorio de electricidad"
-                  data-img="laboratorio_de_electricidad.jpg"
-                  data-desc="Imagen de Laboratorio de electricidad."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Laboratorio de electricidad</a>
-              </li>
-              <li>
-                <a
-                  id="zona-laboratorio-de-programacion-n2"
-                  href="#"
-                  data-nombre="Laboratorio de programación N.º 2"
-                  data-img="laboratorio_de_programacion_N°2.jpg"
-                  data-desc="Imagen de Laboratorio de programación N.º 2."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Laboratorio de programación N.º 2</a>
-              </li>
-              <li>
-                <a
-                  id="zona-sala-de-arte"
-                  href="#"
-                  data-nombre="Sala de arte"
-                  data-img="sala_de_arte.jpg"
-                  data-desc="Imagen de Sala de arte."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Sala de arte</a>
-              </li>
-              <li>
-                <a
-                  id="zona-sala-de-electricidad"
-                  href="#"
-                  data-nombre="Sala de electricidad"
-                  data-img="sala_de_electricidad.jpeg"
-                  data-desc="Imagen de Sala de electricidad."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Sala de electricidad</a>
-              </li>
-              <li>
-                <a
-                  id="zona-sala-de-gastronomia"
-                  href="#"
-                  data-nombre="Sala de gastronomía"
-                  data-img="sala_de_gastronomia.jpg"
-                  data-desc="Imagen de Sala de gastronomía."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Sala de gastronomía</a>
-              </li>
-              <li>
-                <a
-                  id="zona-sala-de-musica"
-                  href="#"
-                  data-nombre="Sala de música"
-                  data-img="sala_de_musica.jpg"
-                  data-desc="Imagen de Sala de música."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Sala de música</a>
-              </li>
-              <li>
-                <a
-                  id="zona-construcciones-metalicas"
-                  href="#"
-                  data-nombre="Taller de construcciones metálicas"
-                  data-img="construcciones_metalicas.jpg"
-                  data-desc="Imagen de Taller de construcciones metálicas."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Taller de construcciones metálicas</a>
-              </li>
-              <li>
-                <a
-                  id="zona-taller-de-musica"
-                  href="#"
-                  data-nombre="Taller de música"
-                  data-img="taller_de_musica.jpg"
-                  data-desc="Imagen de Taller de música."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Taller de música</a>
-              </li>
-              <li>
-                <a
-                  id="zona-taller-de-programacion"
-                  href="#"
-                  data-nombre="Taller de programación"
-                  data-img="taller_de_programacion.jpg"
-                  data-desc="Imagen de Taller de programación."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Taller de programación</a>
-              </li>
-            </ul>
-          </details>
+ <details>
+ <summary><b>Laboratorios, salas y talleres</b></summary>
+ <ul>
+ <li>
+ <a
+ id="zona-almacen-de-equipo-de-edu-fisica"
+ href="#"
+ data-nombre="Almacén de equipo de educación física"
+ data-img="almacen_de_equipo_de_edu_fisica.jpg"
+ data-desc="Almacén para cosas de educación física ubicada todo recto de la cancha techada siguiendo estará atrás del aro de básquet"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Almacén de equipo de educación física</a>
+ </li>
+ <li>
+ <a
+ id="zona-laboratorio-de-ciencias"
+ href="#"
+ data-nombre="Laboratorio de ciencias"
+ data-img="laboratorio_de_ciencias.jpg"
+ data-desc="Laboratorio de ciencias ubicada en el segundo piso al lado del baño de mujeres del segundo piso"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Laboratorio de ciencias</a>
+ </li>
+ <li>
+ <a
+ id="zona-laboratorio-computacion-n1"
+ href="#"
+ data-nombre="Laboratorio de computación N.º 1"
+ data-img="laboratorio_computacion_N°1.jpg"
+ data-desc="Laboratorio de computación ubicado en el segundo piso al lado de la biblioteca "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Laboratorio de computación N.º 1</a>
+ </li>
+ <li>
+ <a
+ id="zona-laboratorio-de-electricidad"
+ href="#"
+ data-nombre="Laboratorio de electricidad"
+ data-img="laboratorio_de_electricidad.jpg"
+ data-desc="laboratorio de electricidad ubicado cerca de la caseta del pasillo donde se encuentra 3 medio A al lado del baño de hombres "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Laboratorio de electricidad</a>
+ </li>
+ <li>
+ <a
+ id="zona-laboratorio-de-programacion-n2"
+ href="#"
+ data-nombre="Laboratorio de programación N.º 2"
+ data-img="laboratorio_de_programacion_N°2.jpg"
+ data-desc="laboratorio de computación número 2 ubicada todo recto de la entrada principal de los alumnos al lado de la cafetería"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Laboratorio de programación N.º 2</a>
+ </li>
+ <li>
+ <a
+ id="zona-sala-de-arte"
+ href="#"
+ data-nombre="Sala de arte"
+ data-img="sala_de_arte.jpg"
+ data-desc="Sala de arte ubicada en la cancha de tierra donde estará junto a la sala de música ambas de color blanco "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Sala de arte</a>
+ </li>
+ <li>
+ <a
+ id="zona-sala-de-electricidad"
+ href="#"
+ data-nombre="Sala de electricidad"
+ data-img="sala_de_electricidad.jpeg"
+ data-desc="sala de electricidad ubicada cerca del mini lugar recreativo o mejor dicho cerca de la sala de contabilidad 3 medio"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Sala de electricidad</a>
+ </li>
+ <li>
+ <a
+ id="zona-sala-de-gastronomia"
+ href="#"
+ data-nombre="Sala de gastronomía"
+ data-img="sala_de_gastronomia.jpg"
+ data-desc="sala de gastronomía ubicada todo recto de la entrada principal de los alumnos antes de llegar al kiosco dobla a mano derecha y siga recto estará bajo una escalera"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Sala de gastronomía</a>
+ </li>
+ <li>
+ <a
+ id="zona-sala-de-musica"
+ href="#"
+ data-nombre="Sala de música"
+ data-img="sala_de_musica.jpg"
+ data-desc="Sala de música ubicada en la cancha de tierra cerca de la misma sala de artes ambas de color blanco una al lado de otra"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Sala de música</a>
+ </li>
+ <li>
+ <a
+ id="zona-construcciones-metalicas"
+ href="#"
+ data-nombre="Taller de construcciones metálicas"
+ data-img="construcciones_metalicas.jpg"
+ data-desc="Taller de construcciones metálicas ubicada en el primer piso al lado del baño de hombres en el pasillo donde se encuentra la escalera que da a sala de programación"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Taller de construcciones metálicas</a>
+ </li>
+ <li>
+ <a
+ id="zona-taller-de-programacion"
+ href="#"
+ data-nombre="Taller de programación"
+ data-img="taller_de_programacion.jpg"
+ data-desc="Taller de programación ubicada todo recto de la entrada principal de los alumnos a mano derecha frente a contención "
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Taller de programación</a>
+ </li>
+ </ul>
+ </details>
 
-          <details>
-            <summary><b>Patios y accesos</b></summary>
-            <ul>
-              <li>
-                <a
-                  id="zona-cancha-de-semento"
-                  href="#"
-                  data-nombre="Cancha de cemento"
-                  data-img="cancha_de_semento.jpg"
-                  data-desc="Imagen de Cancha de cemento."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Cancha de cemento</a>
-              </li>
-              <li>
-                <a
-                  id="zona-cancha-de-tierra"
-                  href="#"
-                  data-nombre="Cancha de tierra"
-                  data-img="cancha_de_tierra.jpg"
-                  data-desc="Imagen de Cancha de tierra."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Cancha de tierra</a>
-              </li>
-              <li>
-                <a
-                  id="zona-caceta-de-inspector-de-pasillo-1"
-                  href="#"
-                  data-nombre="Caseta de inspector de pasillo 1"
-                  data-img="caceta_de_inspector_de_pasillo_1.jpg"
-                  data-desc="Imagen de Caseta de inspector de pasillo 1."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Caseta de inspector de pasillo 1</a>
-              </li>
-              <li>
-                <a
-                  id="zona-caceta-de-inspector-de-pasillo2"
-                  href="#"
-                  data-nombre="Caseta de inspector de pasillo 2"
-                  data-img="caceta_de_inspector_de_pasillo2.jpg"
-                  data-desc="Imagen de Caseta de inspector de pasillo 2."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Caseta de inspector de pasillo 2</a>
-              </li>
-              <li>
-                <a
-                  id="zona-caceta-de-inspector-de-pacillo3"
-                  href="#"
-                  data-nombre="Caseta de inspector de pasillo 3"
-                  data-img="caceta_de_inspector_de_pacillo3.jpg"
-                  data-desc="Imagen de Caseta de inspector de pasillo 3."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Caseta de inspector de pasillo 3</a>
-              </li>
-              <li>
-                <a
-                  id="zona-caceta-de-inspector-de-pacillo4"
-                  href="#"
-                  data-nombre="Caseta de inspector de pasillo 4"
-                  data-img="caceta_de_inspector_de_pacillo4.jpg"
-                  data-desc="Imagen de Caseta de inspector de pasillo 4."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Caseta de inspector de pasillo 4</a>
-              </li>
-              <li>
-                <a
-                  id="zona-caceta-de-inspector-de-pacillo5"
-                  href="#"
-                  data-nombre="Caseta de inspector de pasillo 5"
-                  data-img="caceta_de_inspector_de_pacillo5.jpg"
-                  data-desc="Imagen de Caseta de inspector de pasillo 5."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Caseta de inspector de pasillo 5</a>
-              </li>
-              <li>
-                <a
-                  id="zona-caceta-de-inspector-de-pacillo6"
-                  href="#"
-                  data-nombre="Caseta de inspector de pasillo 6"
-                  data-img="caceta_de_inspector_de_pacillo6.jpg"
-                  data-desc="Imagen de Caseta de inspector de pasillo 6."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Caseta de inspector de pasillo 6</a>
-              </li>
-              <li>
-                <a
-                  id="zona-entrada-a-la-sala-de-profesores-y-pre-universitario"
-                  href="#"
-                  data-nombre="Entrada a la sala de profesores y preuniversitario"
-                  data-img="entrada_a_la_sala_de_profesores_y_pre_universitario.jpg"
-                  data-desc="Imagen de Entrada a la sala de profesores y preuniversitario."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Entrada a la sala de profesores y preuniversitario</a>
-              </li>
-              <li>
-                <a
-                  id="zona-entrada-al-comedor"
-                  href="#"
-                  data-nombre="Entrada al comedor"
-                  data-img="entrada_al_comedor.jpg"
-                  data-desc="Imagen de Entrada al comedor."
-                  onclick="
-                    cargarZonaPorId(this.id);
-                    return false;
-                  "
-                >Entrada al comedor</a>
-              </li>
-            </ul>
-          </details>
-        </div>
-      </aside>
-    </div>
+ <details>
+ <summary><b>Patios y accesos</b></summary>
+ <ul>
+ <li>
+ <a
+ id="zona-cancha-de-semento"
+ href="#"
+ data-nombre="Cancha de cemento"
+ data-img="cancha_de_semento.jpg"
+ data-desc="Cancha principal ubicada directamente siguiendo todo recto de la entrada principal de los alumnos doblando a mano derecha la verá"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Cancha de cemento</a>
+ </li>
+ <li>
+ <a
+ id="zona-cancha-de-tierra"
+ href="#"
+ data-nombre="Cancha de tierra"
+ data-img="cancha_de_tierra.jpg"
+ data-desc="Cancha principal ubicada directamente siguiendo todo recto de la entrada principal de los alumnos doblando a mano derecha siga recto todo recto pasará por la cancha y el kiosco antiguo luego por sala de 3 y 4 medios doblando a mano derecha la verá"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Cancha de tierra</a>
+ </li>
+ <li>
+ <a
+ id="zona-caceta-de-inspector-de-pasillo-1"
+ href="#"
+ data-nombre="Caseta de inspector de pasillo 1"
+ data-img="caceta_de_inspector_de_pasillo_1.jpg"
+ data-desc="Caseta del inspector del pasillo ubicada todo recto de la entrada del principal de los alumnos siga el camino entre sala de contención y cafetería"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Caseta de inspector de pasillo 1</a>
+ </li>
+ <li>
+ <a
+ id="zona-caceta-de-inspector-de-pasillo2"
+ href="#"
+ data-nombre="Caseta de inspector de pasillo 2"
+ data-img="caceta_de_inspector_de_pasillo2.jpg"
+ data-desc="Caseta de inspectora de pasillo ubicada directamente siguiendo todo recto de la entrada principal de los alumnos doblando a mano derecha siga recto todo recto pasará por la cancha y el kiosco antiguo y estará al frente"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Caseta de inspector de pasillo 2</a>
+ </li>
+ <li>
+ <a
+ id="zona-caceta-de-inspector-de-pacillo3"
+ href="#"
+ data-nombre="Caseta de inspector de pasillo 3"
+ data-img="caceta_de_inspector_de_pacillo3.jpg"
+ data-desc="Imagen de Caseta de inspector de pasillo que está al frente de los baños de hombres y al frente de la sala del 3ªH."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Caseta de inspector de pasillo 3</a>
+ </li>
+ <li>
+ <a
+ id="zona-caceta-de-inspector-de-pacillo4"
+ href="#"
+ data-nombre="Caseta de inspector de pasillo 4"
+ data-img="caceta_de_inspector_de_pacillo4.jpg"
+ data-desc="Imagen de Caseta de inspector de pasillo que está al lado de la sala del 3ªI."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Caseta de inspector de pasillo 4</a>
+ </li>
+ <li>
+ <a
+ id="zona-caceta-de-inspector-de-pacillo5"
+ href="#"
+ data-nombre="Caseta de inspector de pasillo 5"
+ data-img="caceta_de_inspector_de_pacillo5.jpg"
+ data-desc="Imagen de Caseta de inspector de pasillo que se encuentra al lado de la sala del 3ªC."
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Caseta de inspector de pasillo 5</a>
+ </li>
+ <li>
+ <a
+ id="zona-caceta-de-inspector-de-pacillo6"
+ href="#"
+ data-nombre="Caseta de inspector de pasillo 6"
+ data-img="caceta_de_inspector_de_pacillo6.jpg"
+ data-desc="Caseta de inspector de pasillo ubicada en el segundo piso al lado de 2C estará la caseta de la inspectora de pasillo"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Caseta de inspector de pasillo 6</a>
+ </li>
+ <li>
+ <a
+ id="zona-entrada-a-la-sala-de-profesores-y-pre-universitario"
+ href="#"
+ data-nombre="Entrada a la sala de profesores y preuniversitario"
+ data-img="entrada_a_la_sala_de_profesores_y_pre_universitario.jpg"
+ data-desc="Entrada a la sala de profesores y preuniversitario Ubicada todo recto de la entrada de los alumnos a mano derecha siga recto verá que está al lado de una mini plaza estará ahí"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Entrada a la sala de profesores y preuniversitario</a>
+ </li>
+ <li>
+ <a
+ id="zona-entrada-al-comedor"
+ href="#"
+ data-nombre="Entrada al comedor"
+ data-img="entrada_al_comedor.jpg"
+ data-desc="Entrada al comedor está ubicada todo recto de la entrada de los alumnos antes de llegar al kiosco doble a mano derecha siga recto pasando por sala de profes siga recto pasará por gastronomía y estará recto y doble"
+ onclick="
+ cargarZonaPorId(this.id);
+ return false;
+ "
+ >Entrada al comedor</a>
+ </li>
+ </ul>
+ </details>
+ </div>
+ </aside>
+ </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+ <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <script>
-      function cargarZonaPorId(idElemento) {
-        const elemento = document.getElementById(idElemento);
-        if (elemento) {
-          const nombre = elemento.getAttribute("data-nombre");
-          const imagen = elemento.getAttribute("data-img");
-          const descripcion = elemento.getAttribute("data-desc");
-          document.getElementById("nombre-zona").innerText = nombre;
-          document.getElementById("img-zona").src = "imagenes/" + imagen;
-          document.getElementById("img-zona").alt = "Imagen de " + nombre;
-          document.getElementById("desc-zona").innerText = descripcion;
-        }
-      }
+ <script>
+ function cargarZonaPorId(idElemento) {
+ const elemento = document.getElementById(idElemento);
+ if (elemento) {
+ const nombre = elemento.getAttribute("data-nombre");
+ const imagen = elemento.getAttribute("data-img");
+ const descripcion = elemento.getAttribute("data-desc");
+ document.getElementById("nombre-zona").innerText = nombre;
+ document.getElementById("img-zona").src = "imagenes/" + imagen;
+ document.getElementById("img-zona").alt = "Imagen de " + nombre;
+ document.getElementById("desc-zona").innerText = descripcion;
+ }
+ }
 
-      function buscarZona() {
-        const input = document
-          .getElementById("buscador")
-          .value.toLowerCase()
-          .trim();
-        const links = document.querySelectorAll(".sidebar-content li a");
-        const todosDetalles = document.querySelectorAll(
-          ".sidebar-content details",
-        );
+ function buscarZona() {
+ const input = document
+ .getElementById("buscador")
+ .value.toLowerCase()
+ .trim();
+ const links = document.querySelectorAll(".sidebar-content li a");
+ const todosDetalles = document.querySelectorAll(
+ ".sidebar-content details",
+ );
 
-        if (input === "") {
-          links.forEach((link) => (link.parentElement.hidden = false));
-          todosDetalles.forEach((d) => (d.open = false));
-          return;
-        }
+ if (input === "") {
+ links.forEach((link) => (link.parentElement.hidden = false));
+ todosDetalles.forEach((d) => (d.open = false));
+ return;
+ }
 
-        links.forEach((link) => (link.parentElement.hidden = true));
-        todosDetalles.forEach((d) => (d.open = false));
+ links.forEach((link) => (link.parentElement.hidden = true));
+ todosDetalles.forEach((d) => (d.open = false));
 
-        links.forEach((link) => {
-          const texto = link.textContent.toLowerCase();
-          const id = link.id.toLowerCase();
+ links.forEach((link) => {
+ const texto = link.textContent.toLowerCase();
+ const id = link.id.toLowerCase();
 
-          if (texto.includes(input) || id.includes(input)) {
-            link.parentElement.hidden = false;
-            let padre = link.closest("details");
+ if (texto.includes(input) || id.includes(input)) {
+ link.parentElement.hidden = false;
+ let padre = link.closest("details");
 
-            while (padre) {
-              padre.open = true;
-              padre = padre.parentElement
-                ? padre.parentElement.closest("details")
-                : null;
-            }
-          }
-        });
-      }
+ while (padre) {
+ padre.open = true;
+ padre = padre.parentElement
+ ? padre.parentElement.closest("details")
+ : null;
+ }
+ }
+ });
+ }
 
-      let mapa;
-      let marcadorUsuario;
+ let mapa;
+ let marcadorUsuario;
 
-      const liceo = {
-        lat: -35.59832172,
-        lng: -71.72353546,
-      };
+ const liceo = {
+ lat: -35.59832172,
+ lng: -71.72353546,
+ };
 
-      function iniciarMapa() {
-        mapa = L.map("map").setView([liceo.lat, liceo.lng], 17);
+ function iniciarMapa() {
+ mapa = L.map("map").setView([liceo.lat, liceo.lng], 17);
 
-        L.tileLayer("https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", {
-          maxZoom: 19,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
-        }).addTo(mapa);
+ L.tileLayer("https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png", {
+ maxZoom: 19,
+ attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · <a href="https://www.openstreetmap.fr/">OpenStreetMap France</a>',
+ }).addTo(mapa);
 
-        const marcadorLiceo = L.marker([liceo.lat, liceo.lng]).addTo(mapa);
+ const marcadorLiceo = L.marker([liceo.lat, liceo.lng]).addTo(mapa);
 
-        marcadorLiceo.bindPopup(
-          "<b>Liceo Manuel Montt</b><br>Avenida Presidente Balmaceda 1880<br>San Javier, Maule",
-        );
+ marcadorLiceo.bindPopup(
+ "<b>Liceo Manuel Montt</b><br>Avenida Presidente Balmaceda 1880<br>San Javier, Maule",
+ );
 
-        marcadorLiceo.openPopup();
-      }
+ marcadorLiceo.openPopup();
+ }
 
-      function encontrarUsuario() {
-        const estado = document.getElementById("estado-mapa");
+ function encontrarUsuario() {
+ const estado = document.getElementById("estado-mapa");
 
-        if (!navigator.geolocation) {
-          estado.innerText = "Tu navegador no permite obtener tu ubicación.";
-          return;
-        }
+ if (!navigator.geolocation) {
+ estado.innerText = "Tu navegador no permite obtener tu ubicación.";
+ return;
+ }
 
-        estado.innerText = "Obteniendo tu ubicación...";
+ estado.innerText = "Obteniendo tu ubicación...";
 
-        navigator.geolocation.getCurrentPosition(
-          function (posicion) {
-            const lat = posicion.coords.latitude;
-            const lng = posicion.coords.longitude;
-            const ubicacion = [lat, lng];
+ navigator.geolocation.getCurrentPosition(
+ function (posicion) {
+ const lat = posicion.coords.latitude;
+ const lng = posicion.coords.longitude;
+ const ubicacion = [lat, lng];
 
-            if (marcadorUsuario) {
-              marcadorUsuario.setLatLng(ubicacion);
-            } else {
-              marcadorUsuario = L.marker(ubicacion).addTo(mapa);
-            }
+ if (marcadorUsuario) {
+ marcadorUsuario.setLatLng(ubicacion);
+ } else {
+ marcadorUsuario = L.marker(ubicacion).addTo(mapa);
+ }
 
-            marcadorUsuario.bindPopup("Estás aquí").openPopup();
+ marcadorUsuario.bindPopup("Estás aquí").openPopup();
 
-            mapa.setView(ubicacion, 17);
+ mapa.setView(ubicacion, 17);
 
-            estado.innerText = "Tu ubicación fue encontrada correctamente.";
-          },
-          function (error) {
-            console.error(error);
+ estado.innerText = "Tu ubicación fue encontrada correctamente.";
+ },
+ function (error) {
+ console.error(error);
 
-            if (error.code === 1) {
-              estado.innerText = "Debes permitir el acceso a tu ubicación.";
-            } else if (error.code === 2) {
-              estado.innerText = "No se pudo determinar tu ubicación.";
-            } else if (error.code === 3) {
-              estado.innerText =
-                "Se agotó el tiempo para obtener tu ubicación.";
-            } else {
-              estado.innerText = "Ocurrió un error obteniendo tu ubicación.";
-            }
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          },
-        );
-      }
+ if (error.code === 1) {
+ estado.innerText = "Debes permitir el acceso a tu ubicación.";
+ } else if (error.code === 2) {
+ estado.innerText = "No se pudo determinar tu ubicación.";
+ } else if (error.code === 3) {
+ estado.innerText =
+ "Se agotó el tiempo para obtener tu ubicación.";
+ } else {
+ estado.innerText = "Ocurrió un error obteniendo tu ubicación.";
+ }
+ },
+ {
+ enableHighAccuracy: true,
+ timeout: 10000,
+ maximumAge: 0,
+ },
+ );
+ }
 
-      function irAlLiceo() {
-        mapa.setView([liceo.lat, liceo.lng], 17);
-      }
+ function irAlLiceo() {
+ mapa.setView([liceo.lat, liceo.lng], 17);
+ }
 
-      // En celulares, las zonas se muestran antes del mapa de ubicación.
-      // En pantallas más grandes se conserva el diseño original.
-      const vistaMovil = window.matchMedia("(max-width: 640px)");
-      const contenedor = document.querySelector(".container");
-      const contenido = document.querySelector(".content");
-      const menuZonas = document.querySelector(".sidebar");
-      const mapaExterno = document.querySelector(".mapa-externo");
+ // En celulares, las zonas se muestran antes del mapa de ubicación.
+ // En pantallas más grandes se conserva el diseño original.
+ const vistaMovil = window.matchMedia("(max-width: 640px)");
+ const contenedor = document.querySelector(".container");
+ const contenido = document.querySelector(".content");
+ const menuZonas = document.querySelector(".sidebar");
+ const mapaExterno = document.querySelector(".mapa-externo");
 
-      function ordenarContenidoSegunPantalla(evento) {
-        if (evento.matches) {
-          contenido.insertBefore(menuZonas, mapaExterno);
-        } else {
-          contenedor.appendChild(menuZonas);
-        }
-      }
+ function ordenarContenidoSegunPantalla(evento) {
+ if (evento.matches) {
+ contenido.insertBefore(menuZonas, mapaExterno);
+ } else {
+ contenedor.appendChild(menuZonas);
+ }
+ }
 
-      ordenarContenidoSegunPantalla(vistaMovil);
-      vistaMovil.addEventListener("change", ordenarContenidoSegunPantalla);
+ ordenarContenidoSegunPantalla(vistaMovil);
+ vistaMovil.addEventListener("change", ordenarContenidoSegunPantalla);
 
-      // Al cerrar una categoría principal, también cerramos sus subcategorías.
-      // Así, cuando se vuelva a abrir, no queda "extendida" por el estado anterior.
-      document
-        .querySelectorAll(".sidebar-content > details")
-        .forEach((detallePrincipal) => {
-          detallePrincipal.addEventListener("toggle", () => {
-            if (!detallePrincipal.open) {
-              detallePrincipal
-                .querySelectorAll("details[open]")
-                .forEach((subdetalle) => {
-                  subdetalle.open = false;
-                });
-            }
-          });
-        });
+ // Al cerrar una categoría principal, también cerramos sus subcategorías.
+ // Así, cuando se vuelva a abrir, no queda "extendida" por el estado anterior.
+ document
+ .querySelectorAll(".sidebar-content > details")
+ .forEach((detallePrincipal) => {
+ detallePrincipal.addEventListener("toggle", () => {
+ if (!detallePrincipal.open) {
+ detallePrincipal
+ .querySelectorAll("details[open]")
+ .forEach((subdetalle) => {
+ subdetalle.open = false;
+ });
+ }
+ });
+ });
 
-      iniciarMapa();
-    </script>
-  </body>
+ iniciarMapa();
+ </script>
+ </body>
 </html>
