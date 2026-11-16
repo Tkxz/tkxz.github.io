@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Biblioteca Escolar José Miguel Carrera: descubre lecturas, recursos y novedades para toda nuestra comunidad."
+    />
+    <meta name="theme-color" content="#f7f6f0" />
+    <title>Profesores y administración | Biblioteca Escolar JMC</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body data-role="admin">
+    <header class="site-header">
+      <a class="brand" href="/admin.html" aria-label="Biblioteca Escolar, ir al inicio">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M5 8.5c4.3-1.6 8-.8 11 1.8v15c-3-2.6-6.7-3.4-11-1.8v-15Z" />
+            <path d="M27 8.5c-4.3-1.6-8-.8-11 1.8v15c3-2.6 6.7-3.4 11-1.8v-15Z" />
+            <path d="M16 10.3v15" />
+          </svg>
+        </span>
+        <span class="brand-copy">
+          <strong>Biblioteca Escolar</strong>
+          <small>Escuela José Miguel Carrera</small>
+        </span>
+      </a>
+
+      <button class="menu-toggle" hidden type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menú">
+        <span></span><span></span>
+      </button>
+      <nav class="main-nav admin-nav" id="main-nav" hidden aria-label="Navegación de profesores y administración">
+        <a class="nav-link active" id="management-nav" href="#gestion" aria-current="location">Administración</a>
+        <div class="session-nav" id="session-nav" hidden>
+          <span id="account-name"></span>
+          <button class="secondary-button" id="logout" type="button">Cerrar sesión</button>
+        </div>
+      </nav>
+    </header>
+    <main class="portal-gate" id="login-gate" aria-labelledby="login-title">
+      <div class="login-card">
+        <h1 id="login-title">Iniciar sesión</h1>
+        <form id="login-form" method="post" action="/api/login">
+          <label class="form-field">Tipo de cuenta
+            <select name="role">
+              <option value="teacher">Profesor</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span id="login-identifier-label">Dirección de Gmail</span>
+            <input name="identifier" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="254" required>
+          </label>
+          <label class="form-field">Contraseña
+            <input name="password" type="password" autocomplete="current-password" maxlength="512" required>
+          </label>
+          <button class="action-button" type="submit">Entrar</button>
+        </form>
+        <p class="form-error" id="login-error" role="status" aria-live="polite" hidden></p>
+        <a class="text-link" href="/estudiantes.html">Acceso para estudiantes</a>
+      </div>
+    </main>
+
+    <main id="app-main" hidden>
+      <section class="management-section section-wrap" id="gestion" hidden>
+        <div class="section-heading">
+          <div><div class="eyebrow"><span class="eyebrow-dot"></span> <span id="management-kicker">Administración bibliotecaria</span></div><h2 id="management-heading">Gestión de <em>la colección.</em></h2></div>
+          <p id="management-description">Administra ejemplares, controla préstamos y comparte opiniones sobre las lecturas.</p>
+        </div>
+        <div class="management-stats" data-admin-only id="management-stats" aria-live="polite"></div>
+        <div class="management-tabs" role="tablist" aria-label="Módulos de gestión">
+          <button class="management-tab active" type="button" data-admin-only data-panel="inventory" role="tab" aria-selected="true">Inventario</button>
+          <button class="management-tab" type="button" data-admin-only data-panel="loans" role="tab" aria-selected="false">Préstamos y devoluciones</button>
+          <button class="management-tab" type="button" data-panel="reviews" role="tab" aria-selected="false">Reseñas</button>
+          <button class="management-tab" type="button" data-admin-only data-panel="requests" role="tab" aria-selected="false">Peticiones <span id="pending-request-count">0</span></button>
+          <button class="management-tab" type="button" data-admin-only data-panel="audit" role="tab" aria-selected="false">Historial de acciones</button>
+        </div>
+        <div class="management-panel active" id="panel-inventory" role="tabpanel">
+          <div class="panel-toolbar"><div><h3>Inventario de libros</h3><p>Control de existencias y estado físico de cada título.</p></div><button class="action-button" id="add-book" type="button">＋ Registrar libro</button></div>
+          <div class="table-tools"><input id="inventory-search" type="search" placeholder="Buscar por título, autor o ISBN"><select id="inventory-filter" aria-label="Filtrar inventario"><option value="all">Todos los estados</option><option value="available">Con disponibilidad</option><option value="low">Pocas existencias</option><option value="out">Agotados</option></select></div>
+          <div class="table-scroll"><table><thead><tr><th>Libro</th><th>ISBN</th><th>Total</th><th>Disponibles</th><th>Prestados</th><th>Estado físico</th><th>Acciones</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
+          <p class="module-empty" id="inventory-empty" hidden>No hay libros que coincidan con la búsqueda.</p>
+        </div>
+        <div class="management-panel" id="panel-loans" role="tabpanel" hidden>
+          <div class="panel-toolbar"><div><h3>Préstamos y devoluciones</h3><p>Registra movimientos y supervisa las fechas de devolución.</p></div><button class="action-button" id="add-loan" type="button">＋ Nuevo préstamo</button></div>
+          <div class="table-tools"><input id="loan-search" type="search" placeholder="Buscar por usuario o libro"><select id="loan-filter" aria-label="Filtrar préstamos"><option value="all">Todos los préstamos</option><option value="Activo">Activos</option><option value="Vencido">Vencidos</option><option value="Devuelto">Devueltos</option></select></div>
+          <div class="table-scroll"><table><thead><tr><th>Solicitante</th><th>Libro</th><th>Fecha préstamo</th><th>Fecha límite</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="loans-body"></tbody></table></div>
+          <p class="module-empty" id="loans-empty" hidden>No hay préstamos registrados.</p>
+        </div>
+        <div class="management-panel" id="panel-requests" role="tabpanel" hidden>
+          <div class="panel-toolbar"><div><h3>Peticiones de estudiantes</h3><p>Aprueba préstamos y confirma devoluciones solicitadas.</p></div></div>
+          <div class="table-tools"><select id="request-filter" aria-label="Filtrar peticiones"><option value="all">Todas las peticiones</option><option value="Pendiente">Pendientes</option><option value="Aprobada">Aprobadas</option><option value="Rechazada">Rechazadas</option></select></div>
+          <div class="table-scroll"><table><thead><tr><th>Estudiante</th><th>Libro</th><th>Solicitud</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="requests-body"></tbody></table></div><p class="module-empty" id="requests-empty" hidden>No hay peticiones registradas.</p>
+        </div>
+        <div class="management-panel" id="panel-reviews" role="tabpanel" hidden>
+          <div class="panel-toolbar"><div><h3>Opiniones de lectores</h3><p>Valoraciones y comentarios asociados a cada libro.</p></div><button class="action-button" id="add-review" type="button">＋ Escribir reseña</button></div>
+          <div class="table-tools review-tools" role="group" aria-label="Filtros de opiniones">
+            <select id="review-sort" aria-label="Ordenar reseñas">
+              <option value="newest">Más recientes</option>
+              <option value="highest">Mejor valoradas</option>
+              <option value="lowest">Menor valoración</option>
+            </select>
+            <select id="review-book-filter" aria-label="Filtrar reseñas por libro">
+              <option value="all">Todos los libros</option>
+            </select>
+            <button class="secondary-button" id="review-reset" type="button">Restablecer filtros</button>
+          </div>
+          <div class="review-list" id="review-list"></div><p class="module-empty" id="reviews-empty" role="status" hidden>Aún no hay reseñas publicadas.</p>
+        </div>
+        <div class="management-panel" id="panel-audit" role="tabpanel" hidden>
+          <div class="panel-toolbar"><div><h3>Historial de acciones</h3><p>Movimientos de inventario, moderación y gestión de préstamos.</p></div></div>
+          <div class="table-scroll" role="region" aria-label="Historial de acciones" tabindex="0">
+            <table>
+              <thead><tr><th scope="col">Fecha y hora</th><th scope="col">Acción</th><th scope="col">Elemento afectado</th><th scope="col">Nombre</th><th scope="col">Rol</th><th scope="col">Identificador</th></tr></thead>
+              <tbody id="audit-body"></tbody>
+            </table>
+          </div>
+          <p class="module-empty" id="audit-empty" role="status" hidden>Aún no hay acciones registradas.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <a class="brand footer-brand" href="/admin.html">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path d="M5 8.5c4.3-1.6 8-.8 11 1.8v15c-3-2.6-6.7-3.4-11-1.8v-15Z" />
+            <path d="M27 8.5c-4.3-1.6-8-.8-11 1.8v15c3-2.6 6.7-3.4 11-1.8v-15Z" />
+            <path d="M16 10.3v15" />
+          </svg>
+        </span>
+        <span class="brand-copy">
+          <strong>Biblioteca Escolar</strong>
+          <small>Escuela José Miguel Carrera</small>
+        </span>
+      </a>
+      <p>Un libro, una idea, un mundo por descubrir.</p>
+      <span class="footer-year">© <span id="current-year"></span> Escuela José Miguel Carrera</span>
+    </footer>
+
+    <dialog class="management-dialog" id="management-dialog" aria-labelledby="management-dialog-title">
+      <button class="dialog-close" id="management-dialog-close" type="button" aria-label="Cerrar">×</button>
+      <h2 id="management-dialog-title">Formulario</h2><form id="management-form"></form>
+    </dialog>
+    <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
+  </body>
+</html>
