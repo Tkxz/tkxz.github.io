@@ -10,6 +10,8 @@
     <meta name="theme-color" content="#f7f6f0" />
     <title>Estudiantes | Biblioteca Escolar JMC</title>
     <link rel="stylesheet" href="styles.css" />
+    <script src="data.js" defer></script>
+    <script src="local.js" defer></script>
     <script src="script.js" defer></script>
   </head>
   <body data-role="student">
@@ -46,7 +48,7 @@
     <main class="portal-gate" id="login-gate" aria-labelledby="login-title">
       <div class="login-card">
         <h1 id="login-title">Iniciar sesión</h1>
-        <form id="login-form" method="post" action="/api/login">
+        <form id="login-form">
           <input type="hidden" name="role" value="student">
           <label class="form-field">
             <span id="login-identifier-label">RUT</span>
@@ -58,7 +60,7 @@
           <button class="action-button" type="submit">Entrar</button>
         </form>
         <p class="form-error" id="login-error" role="status" aria-live="polite" hidden></p>
-        <a class="text-link" href="/admin.html">Acceso para profesores y administradores</a>
+        <a class="text-link" href="admin.html">Acceso para administración</a>
       </div>
     </main>
 

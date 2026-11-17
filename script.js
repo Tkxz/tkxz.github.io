@@ -1,6 +1,6 @@
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
-const roleNames = { admin: "Administrador", student: "Estudiante", teacher: "Profesor" };
+const roleNames = { admin: "Administrador", student: "Estudiante" };
 const pageRole = document.body.dataset.role;
 const localDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Santiago" });
 const dateTime = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeStyle: "medium", timeZone: "America/Santiago" });
@@ -15,6 +15,7 @@ let data = { user: null, books: [], reviews: [], requests: [], loans: [] };
 let stateRequest = 0;
 let sessionVersion = 0;
 let sessionChanging = false;
+let localApp;
 
 function toast(message, type = "success") {
   const item = document.createElement("div");
@@ -25,34 +26,12 @@ function toast(message, type = "success") {
 }
 
 async function api(path, method = "GET", body, actorId) {
-  const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (actorId) headers["X-Biblioteca-Actor"] = actorId;
-  let response;
-  try {
-    response = await fetch(`/api${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch {
-    throw new Error("No se pudo conectar con la biblioteca. Comprueba que el servidor esté en ejecución.");
-  }
-  if (response.status === 204) return;
-  const result = await response.json().catch(() => {
-    throw new Error("La biblioteca devolvió una respuesta inesperada.");
-  });
-  if (!response.ok) {
-    const error = new Error(result.message || "No se pudo completar la operación.");
-    error.status = response.status;
-    error.code = result.code;
-    throw error;
-  }
-  return result;
+  localApp ||= window.BibliotecaLocal.createLocalApp({ seed: window.BIBLIOTECA_DATA });
+  return localApp.request(path, method, body, actorId);
 }
 
 function roleAllowsPage(role) {
-  return pageRole === "student" ? role === "student" : role === "admin" || role === "teacher";
+  return pageRole === "student" ? role === "student" : role === "admin";
 }
 
 let sectionObserver;
@@ -101,15 +80,13 @@ function setPageAccess() {
     $("#gestion").hidden = false;
     const admin = user.role === "admin";
     document.querySelectorAll("[data-admin-only]").forEach((control) => { control.hidden = !admin; });
-    $("#management-kicker").textContent = admin ? "Administración bibliotecaria" : "Espacio para profesores";
+    $("#management-kicker").textContent = "Administración bibliotecaria";
     const emphasis = document.createElement("em");
-    emphasis.textContent = admin ? "la colección." : "lectores.";
-    $("#management-heading").replaceChildren(admin ? "Gestión de " : "Opiniones de ", emphasis);
-    $("#management-description").textContent = admin
-      ? "Administra ejemplares, controla préstamos y comparte opiniones sobre las lecturas."
-      : "Consulta y comparte reseñas de los libros de la biblioteca.";
-    $("#management-nav").textContent = admin ? "Administración" : "Reseñas";
-    activateTab(admin ? "inventory" : "reviews");
+    emphasis.textContent = "la colección.";
+    $("#management-heading").replaceChildren("Gestión de ", emphasis);
+    $("#management-description").textContent = "Administra ejemplares, controla préstamos y comparte opiniones sobre las lecturas.";
+    $("#management-nav").textContent = "Administración";
+    activateTab("inventory");
   }
   renderAll();
   setupSectionNavigation();
@@ -637,29 +614,19 @@ function setupSectionNavigation() {
 function setupSession() {
   const login = $("#login-form");
   const logout = $("#logout");
-  const role = login.elements.role;
+  const role = login.elements.role.value;
   const identifier = login.elements.identifier;
   const password = login.elements.password;
   const submit = login.querySelector('[type="submit"]');
 
-  function updateIdentifierLabel() {
-    const fields = {
-      student: ["RUT", "12.345.678-5", "text"],
-      teacher: ["Dirección de Gmail", "nombre@gmail.com", "email"],
-      admin: ["Correo electrónico", "", "email"],
-    };
-    const [label, placeholder, type] = fields[role.value];
-    $("#login-identifier-label").textContent = label;
-    identifier.type = type;
-    identifier.placeholder = placeholder;
-  }
-  role.addEventListener("change", () => {
-    identifier.value = "";
-    password.value = "";
-    showLoginMessage();
-    updateIdentifierLabel();
-  });
-  updateIdentifierLabel();
+  const fields = {
+    student: ["RUT", "12.345.678-5", "text"],
+    admin: ["Correo electrónico", "", "email"],
+  };
+  const [label, placeholder, type] = fields[role];
+  $("#login-identifier-label").textContent = label;
+  identifier.type = type;
+  identifier.placeholder = placeholder;
   login.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (sessionChanging) return;
@@ -688,7 +655,6 @@ function setupSession() {
       await api("/logout", "POST");
       endSession();
       login.reset();
-      updateIdentifierLabel();
       identifier.focus();
     } catch (error) {
       displayError(error);
@@ -717,6 +683,10 @@ function setupSession() {
 
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) refreshState(true).catch((error) => endSession(error.status === 401 ? "" : error.message));
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key !== localApp?.storageKey) return;
+    refreshState(true).catch((error) => endSession(error.status === 401 ? "" : error.message));
   });
 }
 
