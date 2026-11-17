@@ -15,6 +15,6 @@ El catálogo inicial y la lista de expresiones prohibidas también están en `da
 
 ## Datos locales
 
-La aplicación guarda cuentas, catálogo, reseñas, préstamos, peticiones e historial en `localStorage` del navegador. Los cambios permanecen en ese perfil de navegador y no se sincronizan entre equipos. Las nuevas cuentas que agregues a `demoAccounts` se incorporan automáticamente al abrir la app. Para restablecer los datos iniciales, borra el almacenamiento local de la biblioteca o abre la aplicación en un perfil de navegador nuevo.
+La aplicación guarda cuentas, catálogo, reseñas, préstamos, peticiones e historial en `localStorage` del navegador. Cada pestaña mantiene su inicio de sesión independiente mediante `sessionStorage`, así que puedes tener abiertas a la vez las páginas de estudiante y administración. Los datos se comparten entre pestañas del mismo navegador, pero no se sincronizan entre equipos. Las nuevas cuentas que agregues a `demoAccounts` se incorporan automáticamente al abrir la app. Para restablecer los datos iniciales, borra el almacenamiento local de la biblioteca o abre la aplicación en un perfil de navegador nuevo.
 
 Este modo es solo para desarrollo y pruebas: las cuentas y contraseñas demo están incluidas en archivos JavaScript públicos, y los datos del navegador no están protegidos para producción. No uses contraseñas reales ni información personal. El servidor y la base de datos se incorporarán más adelante.

@@ -4,6 +4,7 @@
   if (root) root.BibliotecaLocal = api;
 })(typeof globalThis === "object" ? globalThis : this, function () {
   const storageKey = "biblioteca-local-v1";
+  const sessionStorageKey = `${storageKey}-session`;
   const conditions = ["Nuevo", "Bueno", "Regular", "Deteriorado"];
   const schoolDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit",
@@ -192,9 +193,18 @@
     return book;
   }
 
-  function createLocalApp({ storage = globalThis.localStorage, seed = globalThis.BIBLIOTECA_DATA, now = () => new Date(), createId = generateId } = {}) {
+  function createLocalApp({
+    storage = globalThis.localStorage,
+    sessions = globalThis.sessionStorage,
+    seed = globalThis.BIBLIOTECA_DATA,
+    now = () => new Date(),
+    createId = generateId,
+  } = {}) {
     if (!storage || typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
       throw new Error("Este navegador no permite almacenamiento local. Abre la biblioteca en un navegador con localStorage habilitado.");
+    }
+    if (!sessions || typeof sessions.getItem !== "function" || typeof sessions.setItem !== "function" || typeof sessions.removeItem !== "function") {
+      throw new Error("Este navegador no permite sesiones por pestaña. Abre la biblioteca en un navegador con sessionStorage habilitado.");
     }
     if (!seed || !Array.isArray(seed.initialBooks) || !Array.isArray(seed.demoAccounts) || !Array.isArray(seed.prohibitedExpressions)) {
       throw new Error("Faltan los datos locales de la biblioteca. Comprueba que data.js se haya cargado antes que local.js.");
@@ -208,7 +218,6 @@
         requests: [],
         audit: [],
         users: structuredClone(seed.demoAccounts),
-        sessionUserId: null,
       };
     }
 
@@ -259,7 +268,8 @@
     }
 
     function currentUser(state) {
-      return state.users.find((user) => user.id === state.sessionUserId) || null;
+      const sessionUserId = sessions.getItem(sessionStorageKey);
+      return state.users.find((user) => user.id === sessionUserId) || null;
     }
 
     function reviewFields(state, actor, input, previous) {
@@ -449,12 +459,11 @@
         const state = readState();
         const user = state.users.find((account) => account.role === role && account.identifier === normalized && account.password === password);
         if (!user) failure(401, "BAD_CREDENTIALS", "Identificador o contraseña incorrectos.");
-        state.sessionUserId = user.id;
-        writeState(state);
+        sessions.setItem(sessionStorageKey, user.id);
         return { user: publicUser(user) };
       }
       if (method === "POST" && path === "/logout") {
-        update((state) => { state.sessionUserId = null; });
+        sessions.removeItem(sessionStorageKey);
         return;
       }
 
