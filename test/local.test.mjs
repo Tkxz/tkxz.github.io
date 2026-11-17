@@ -46,6 +46,22 @@ test("Cuentas demo inician sesión y los cambios persisten en el almacenamiento 
   await assert.rejects(reopened.request("/state"), { status: 401 });
 });
 
+test("Una cuenta demo agregada después se incorpora al almacenamiento ya existente", async () => {
+  const { storage } = openApp();
+  const app = createLocalApp({
+    storage,
+    seed: { ...seed, demoAccounts: seed.demoAccounts.slice(0, 2) },
+  });
+  await app.request("/state").catch((error) => assert.equal(error.status, 401));
+
+  const updatedApp = createLocalApp({ storage, seed });
+  const extraAccount = seed.demoAccounts[2];
+  const { user } = await updatedApp.request("/login", "POST", extraAccount);
+  assert.equal(user.id, "demo-admin-tkxzg");
+  assert.equal(user.name, "Tkxzg");
+  assert.equal((await updatedApp.request("/state")).user.identifier, "admin@gmail.com");
+});
+
 test("Estudiantes solicitan préstamos y administración aprueba y registra devoluciones", async () => {
   const { app } = openApp();
   await app.request("/login", "POST", seed.demoAccounts[0]);

@@ -3,6 +3,7 @@
     demoAccounts: [
       { id: "demo-student", role: "student", identifier: "99999999-9", name: "Estudiante de prueba", password: "5nLrX_Z4zux3-gdQ" },
       { id: "demo-admin", role: "admin", identifier: "admin@demo.example", name: "Administración de prueba", password: "9p94fwf6JT11Bg3F" },
+      { id: "demo-admin-tkxzg", role: "admin", identifier: "admin@gmail.com", name: "Tkxzg", password: "676767" },
     ],
     initialBooks: [
       { id: "b1", title: "El jardín secreto", author: "Frances Hodgson Burnett", category: "Narrativa", age: "Desde 10 años", pages: "288 páginas", cover: "cover-1", description: "Mary llega a una casa llena de secretos y descubre un jardín abandonado. Una historia entrañable sobre la amistad, la naturaleza y el poder de empezar de nuevo.", isbn: "978950072", publisher: "Editorial clásica", year: 1911, total: 4, available: 3, condition: "Bueno", registeredAt: "2026-01-01T12:00:00.000Z" },

@@ -226,6 +226,14 @@
         state.loans ||= [];
         state.requests ||= [];
         state.audit ||= [];
+        let addedDemoAccount = false;
+        for (const account of seed.demoAccounts) {
+          if (!state.users.some((user) => user.id === account.id)) {
+            state.users.push(structuredClone(account));
+            addedDemoAccount = true;
+          }
+        }
+        if (addedDemoAccount) writeState(state);
         return state;
       } catch {
         throw new Error("Los datos guardados de la biblioteca están dañados. Exporta una copia antes de restablecer el almacenamiento local.");
