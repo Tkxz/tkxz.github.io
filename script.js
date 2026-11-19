@@ -5,6 +5,11 @@ const pageRole = document.body.dataset.role;
 const localDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Santiago" });
 const dateTime = new Intl.DateTimeFormat("es-CL", { dateStyle: "short", timeStyle: "medium", timeZone: "America/Santiago" });
 const dateToday = () => localDate.format(new Date());
+const dateAfterDays = (date, days) => {
+  const result = new Date(`${date}T00:00:00Z`);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
+};
 const formatDate = (value) => {
   if (!value) return "—";
   if (value.length === 10) return new Date(`${value}T12:00:00`).toLocaleDateString("es-CL");
@@ -14,8 +19,8 @@ const formatDate = (value) => {
 let data = { user: null, books: [], reviews: [], requests: [], loans: [] };
 let stateRequest = 0;
 let sessionVersion = 0;
-let sessionChanging = false;
 let localApp;
+const NAV_ACTIVATION_OFFSET = 48;
 
 function toast(message, type = "success") {
   const item = document.createElement("div");
@@ -34,18 +39,25 @@ function roleAllowsPage(role) {
   return pageRole === "student" ? role === "student" : role === "admin";
 }
 
-let sectionObserver;
-function showLoginMessage(message = "") {
-  const region = $("#login-error");
-  region.textContent = message;
-  region.hidden = !message;
+let sectionNavigationUpdate;
+function showPageError(message = "") {
+  if (message) toast(message, "error");
 }
 
 function clearRenderedSession() {
   sessionVersion += 1;
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
+  if (sectionNavigationUpdate) {
+    window.removeEventListener("scroll", sectionNavigationUpdate);
+    window.removeEventListener("resize", sectionNavigationUpdate);
+    sectionNavigationUpdate = null;
+  }
   document.querySelectorAll("#management-form, #inventory-body, #loans-body, #requests-body, #audit-body, #student-requests-body, #management-stats, #student-summary, #book-grid, #review-list, #student-review-list, #student-name, #review-book-filter, #student-review-book-filter")
     .forEach((region) => region.replaceChildren());
+  ["ticket-id", "ticket-student", "ticket-book", "ticket-loan-date", "ticket-due-date"].forEach((id) => {
+    const field = $(`#${id}`);
+    if (field) field.textContent = "";
+  });
   $("#management-form").onsubmit = null;
   const menuToggle = $(".menu-toggle");
   menuToggle.setAttribute("aria-expanded", "false");
@@ -57,22 +69,16 @@ function setPageAccess() {
   clearRenderedSession();
   const user = data.user;
   const authorized = Boolean(user && roleAllowsPage(user.role));
-  $("#login-gate").hidden = authorized;
-  $("#session-nav").hidden = !user;
-  $("#main-nav").hidden = !user;
-  $(".menu-toggle").hidden = !user;
+  $("#main-nav").hidden = !authorized;
+  $(".menu-toggle").hidden = !authorized;
   document.querySelectorAll("#main-nav a").forEach((link) => { link.hidden = !authorized; });
   $("#app-main").hidden = !authorized;
-  $("#account-name").textContent = user?.name || "";
-  $("#login-form").hidden = Boolean(user) && !authorized;
 
   if (!authorized) {
-    sectionObserver?.disconnect();
-    showLoginMessage(user ? "Ya hay una sesión de otro perfil. Ciérrala para entrar en este panel." : "");
+    showPageError(user ? "El perfil activo no coincide con esta página." : "");
     return;
   }
 
-  showLoginMessage();
   if ($("#student-dashboard")) {
     $("#student-dashboard").hidden = false;
     $("#student-name").textContent = user.name;
@@ -96,7 +102,7 @@ function endSession(message = "") {
   stateRequest += 1;
   data = { user: null, books: [], reviews: [], requests: [], loans: [] };
   setPageAccess();
-  showLoginMessage(message);
+  showPageError(message);
 }
 
 async function refreshState(applyAccess = false) {
@@ -116,11 +122,11 @@ async function refreshState(applyAccess = false) {
 
 function displayError(error, region) {
   if (error.status === 401) {
-    endSession("La sesión terminó. Vuelve a iniciar sesión.");
+    endSession("La vista temporal terminó. Recarga la página para volver a abrirla.");
   } else if (error.code === "SESSION_CHANGED") {
     endSession(error.message);
     refreshState().catch((refreshError) => {
-      if (refreshError.status !== 401) showLoginMessage(refreshError.message);
+      if (refreshError.status !== 401) showPageError(refreshError.message);
     });
     toast(error.message, "error");
   } else if (region) {
@@ -158,7 +164,7 @@ function bookStats() {
   const available = data.books.reduce((sum, book) => sum + book.available, 0);
   return {
     available,
-    borrowed: total - available,
+    borrowed: data.loans.filter((loan) => loan.status !== "Devuelto").length,
     low: data.books.filter((book) => book.available === 1).length,
     out: data.books.filter((book) => book.available === 0).length,
   };
@@ -212,25 +218,54 @@ function showBookDetails(id) {
   const rating = ratingSummary(book.id);
   $("#dialog-meta").textContent = [book.age, book.pages, `${book.available} ejemplares disponibles`, rating.count ? `★ ${rating.average.toFixed(1)}/5 (${rating.count} reseñas)` : "Sin valoraciones"].filter(Boolean).join(" · ");
   $(".availability-note").textContent = `Estado físico: ${book.condition || "No especificado"}. ISBN: ${book.isbn || "No registrado"}.`;
-  $("#student-book-request")?.remove();
-  $("#book-request-error")?.remove();
+  $("#student-loan-form")?.remove();
   if (data.user?.role === "student") {
-    const action = document.createElement("button");
-    action.id = "student-book-request";
-    action.className = "action-button";
-    action.type = "button";
-    action.textContent = book.available > 0 ? "Solicitar préstamo" : "Sin ejemplares disponibles";
-    action.disabled = book.available < 1;
+    const form = document.createElement("form");
+    form.id = "student-loan-form";
+    form.className = "student-loan-form";
+    const dueDateField = document.createElement("label");
+    dueDateField.className = "form-field";
+    dueDateField.append("Fecha de devolución (máximo 14 días)");
+    const dueDate = document.createElement("input");
+    dueDate.type = "date";
+    dueDate.name = "dueDate";
+    dueDate.required = true;
+    dueDate.min = dateToday();
+    dueDate.max = dateAfterDays(dateToday(), 14);
+    dueDate.value = dueDate.max;
+    dueDateField.append(dueDate);
+
+    const ticketField = document.createElement("label");
+    ticketField.className = "ticket-option";
+    const ticketRequested = document.createElement("input");
+    ticketRequested.type = "checkbox";
+    ticketRequested.name = "ticketRequested";
+    ticketField.append(ticketRequested, document.createTextNode("Quiero un ticket físico para pegar en el libro"));
+
     const errorRegion = document.createElement("p");
-    errorRegion.id = "book-request-error";
     errorRegion.className = "form-error";
     errorRegion.setAttribute("role", "alert");
     errorRegion.hidden = true;
-    action.addEventListener("click", () => runAction(action, async () => {
-      await mutate("/requests", "POST", { type: "loan", bookId: book.id }, "Solicitud enviada. Espera la aprobación de biblioteca.");
-      if (action.isConnected) $("#book-dialog").close();
-    }, errorRegion));
-    $(".dialog-copy").append(errorRegion, action);
+    const submit = document.createElement("button");
+    submit.id = "student-book-request";
+    submit.className = "action-button";
+    submit.type = "submit";
+    submit.textContent = book.available > 0 ? "Solicitar préstamo" : "Sin ejemplares disponibles";
+    submit.disabled = book.available < 1;
+    form.append(dueDateField, ticketField, errorRegion, submit);
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      runAction(submit, async () => {
+        await mutate("/requests", "POST", {
+          type: "loan",
+          bookId: book.id,
+          dueDate: dueDate.value,
+          ticketRequested: ticketRequested.checked,
+        }, "Solicitud enviada. Espera la aprobación de biblioteca.");
+        if (form.isConnected) $("#book-dialog").close();
+      }, errorRegion);
+    });
+    $(".dialog-copy").append(form);
   }
   $("#book-dialog").showModal();
 }
@@ -261,17 +296,34 @@ function renderLoans() {
   const query = $("#loan-search").value.trim().toLocaleLowerCase("es");
   const filter = $("#loan-filter").value;
   const loans = [...data.loans].reverse().map((loan) => ({ ...loan, title: data.books.find((book) => book.id === loan.bookId)?.title || loan.bookTitle || "Libro eliminado" }))
-    .filter((loan) => (filter === "all" || loan.status === filter) && `${loan.user} ${loan.title}`.toLocaleLowerCase("es").includes(query));
+    .filter((loan) => loan.status !== "Devuelto"
+      && (filter === "all" || loan.status === filter)
+      && `${loan.user} ${loan.title}`.toLocaleLowerCase("es").includes(query));
   $("#loans-body").innerHTML = loans.map((loan) => {
     const remaining = (Date.parse(loan.dueDate) - Date.parse(dateToday())) / 86400000;
     const dueNote = remaining < 0 ? `${Math.abs(remaining)} días de atraso` : `${remaining} días restantes`;
     const returned = loan.status === "Devuelto";
+    const ticket = loan.ticketId ? `<button class="table-action" type="button" data-view-ticket="${escapeHTML(loan.id)}">${escapeHTML(loan.ticketId)}</button>` : "—";
     const action = returned ? `<small>Devuelto ${formatDate(loan.returnedAt)}</small>` : `<button class="table-action" type="button" data-return-loan="${escapeHTML(loan.id)}">Registrar devolución</button>`;
     return `<tr><td><strong>${escapeHTML(loan.user)}</strong></td><td>${escapeHTML(loan.title)}</td>
       <td>${formatDate(loan.loanDate)}</td><td>${formatDate(loan.dueDate)}${returned ? "" : `<small>${dueNote}</small>`}</td>
-      <td>${statusPill(loan.status)}</td><td>${action}</td></tr>`;
+      <td>${ticket}</td><td>${statusPill(loan.status)}</td><td>${action}</td></tr>`;
   }).join("");
   $("#loans-empty").hidden = loans.length > 0;
+}
+
+function showLoanTicket(id) {
+  const loan = data.loans.find((item) => item.id === id);
+  if (!loan?.ticketId) {
+    toast("No hay un ticket disponible para este préstamo.", "error");
+    return;
+  }
+  $("#ticket-id").textContent = loan.ticketId;
+  $("#ticket-student").textContent = loan.user;
+  $("#ticket-book").textContent = data.books.find((book) => book.id === loan.bookId)?.title || loan.bookTitle || "Libro eliminado";
+  $("#ticket-loan-date").textContent = formatDate(loan.loanDate);
+  $("#ticket-due-date").textContent = formatDate(loan.dueDate);
+  $("#ticket-dialog").showModal();
 }
 
 function renderRequests() {
@@ -280,8 +332,12 @@ function renderRequests() {
   $("#requests-body").innerHTML = requests.map((request) => {
     const book = data.books.find((item) => item.id === request.bookId);
     const type = request.type === "loan" ? "Préstamo" : "Devolución";
+    const ticketLoan = request.ticketId ? data.loans.find((loan) => loan.ticketId === request.ticketId) : null;
+    const ticket = ticketLoan
+      ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">Ver</button></div>`
+      : request.ticketRequested ? `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>` : "—";
     const action = request.status === "Pendiente" ? `<div class="row-actions"><button type="button" data-approve-request="${escapeHTML(request.id)}">Aprobar</button><button type="button" class="danger-action" data-reject-request="${escapeHTML(request.id)}">Rechazar</button></div>` : "—";
-    return `<tr><td>${escapeHTML(request.student)}</td><td>${escapeHTML(book?.title || request.bookTitle || "Libro eliminado")}</td><td>${type}</td><td>${formatDate(request.createdAt)}</td><td>${statusPill(request.status)}</td><td>${action}</td></tr>`;
+    return `<tr><td>${escapeHTML(request.student)}</td><td>${escapeHTML(book?.title || request.bookTitle || "Libro eliminado")}</td><td>${type}</td><td>${formatDate(request.createdAt)}</td><td>${formatDate(request.dueDate)}</td><td>${ticket}</td><td>${statusPill(request.status)}</td><td>${action}</td></tr>`;
   }).join("");
   $("#requests-empty").hidden = requests.length > 0;
   $("#pending-request-count").textContent = data.requests.filter((request) => request.status === "Pendiente").length;
@@ -296,14 +352,17 @@ function renderStudentPanel() {
   ].map(([label, count, note]) => `<article class="stat-card"><span>${label}</span><strong>${count}</strong><small>${note}</small></article>`).join("");
 
   const rows = [
-    ...requests.map((item) => ({ item, when: item.createdAt, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
-    ...loans.map((item) => ({ item, when: item.loanDate, label: "Préstamo", returnable: item.status !== "Devuelto" })),
+    ...requests.map((item) => ({ item, when: item.createdAt, dueDate: item.dueDate, ticketId: item.ticketId, ticketRequested: item.ticketRequested, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
+    ...loans.map((item) => ({ item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, label: "Préstamo", returnable: item.status !== "Devuelto" })),
   ].sort((a, b) => b.when.localeCompare(a.when));
-  $("#student-requests-body").innerHTML = rows.map(({ item, when, label, returnable }) => {
+  $("#student-requests-body").innerHTML = rows.map(({ item, when, dueDate, ticketId, ticketRequested, label, returnable }) => {
     const book = data.books.find((entry) => entry.id === item.bookId);
     const returnPending = requests.some((request) => request.type === "return" && request.loanId === item.id && request.status === "Pendiente");
     const action = returnable && !returnPending ? `<button class="table-action" data-student-return="${escapeHTML(item.id)}" type="button">Solicitar devolución</button>` : "—";
-    return `<tr><td>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</td><td>${label}</td><td>${formatDate(when)}</td><td>${statusPill(item.status)}</td><td>${action}</td></tr>`;
+    const ticket = ticketId
+      ? escapeHTML(ticketId)
+      : ticketRequested ? (item.status === "Pendiente" ? "Al aprobar" : "No generado") : "—";
+    return `<tr><td>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</td><td>${label}</td><td>${formatDate(when)}</td><td>${formatDate(dueDate)}</td><td>${ticket}</td><td>${statusPill(item.status)}</td><td>${action}</td></tr>`;
   }).join("");
   $("#student-requests-empty").hidden = rows.length > 0;
 }
@@ -537,6 +596,11 @@ function bindUI() {
   $("#inventory-filter")?.addEventListener("change", renderInventory);
   $("#add-loan")?.addEventListener("click", addLoan);
   $("#loans-body")?.addEventListener("click", (event) => {
+    const ticketButton = event.target.closest("[data-view-ticket]");
+    if (ticketButton) {
+      showLoanTicket(ticketButton.dataset.viewTicket);
+      return;
+    }
     const button = event.target.closest("[data-return-loan]");
     if (button && confirm("¿Confirmar la devolución de este ejemplar?")) {
       runAction(button, () => mutate(`/loans/${encodeURIComponent(button.dataset.returnLoan)}/return`, "POST", undefined, "Devolución registrada. Inventario actualizado."));
@@ -550,6 +614,11 @@ function bindUI() {
     if (button) runAction(button, () => mutate("/requests", "POST", { type: "return", loanId: button.dataset.studentReturn }, "Petición de devolución enviada."));
   });
   $("#requests-body")?.addEventListener("click", (event) => {
+    const ticketButton = event.target.closest("[data-view-ticket]");
+    if (ticketButton) {
+      showLoanTicket(ticketButton.dataset.viewTicket);
+      return;
+    }
     const button = event.target.closest("[data-approve-request], [data-reject-request]");
     if (!button) return;
     const approve = Boolean(button.dataset.approveRequest);
@@ -581,10 +650,15 @@ function bindUI() {
   $("#management-dialog").addEventListener("cancel", (event) => {
     if ($("#management-dialog-close").disabled) event.preventDefault();
   });
+  $("#ticket-dialog-close")?.addEventListener("click", () => $("#ticket-dialog").close());
+  $("#ticket-print")?.addEventListener("click", () => window.print());
 }
 
 function setupSectionNavigation() {
-  sectionObserver?.disconnect();
+  if (sectionNavigationUpdate) {
+    window.removeEventListener("scroll", sectionNavigationUpdate);
+    window.removeEventListener("resize", sectionNavigationUpdate);
+  }
   const links = [...document.querySelectorAll(".main-nav .nav-link[href^='#']:not([hidden])")];
   const sections = links.map((link) => $(link.getAttribute("href"))).filter((section) => section && !section.hidden);
 
@@ -600,70 +674,22 @@ function setupSectionNavigation() {
   links.forEach((link) => {
     link.onclick = () => setActive(link.hash.slice(1));
   });
-  setActive(sections.find((section) => `#${section.id}` === location.hash)?.id || sections[0]?.id);
-  if (sections.length <= 1 || !("IntersectionObserver" in window)) return;
+  sectionNavigationUpdate = () => {
+    const activationPoint = $(".site-header").getBoundingClientRect().bottom + NAV_ACTIVATION_OFFSET;
+    const current = sections.reduce((closest, section) => {
+      const distance = Math.abs(section.getBoundingClientRect().top - activationPoint);
+      return distance < closest.distance ? { section, distance } : closest;
+    }, { section: sections[0], distance: Infinity }).section;
+    setActive(current?.id);
+  };
 
-  sectionObserver = new IntersectionObserver((entries) => {
-    const visible = entries.filter((entry) => entry.isIntersecting)
-      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-    if (visible) setActive(visible.target.id);
-  }, { rootMargin: "-18% 0px -65% 0px", threshold: [0, 0.15, 0.35, 0.6] });
-  sections.forEach((section) => sectionObserver.observe(section));
+  setActive(sections.find((section) => `#${section.id}` === location.hash)?.id || sections[0]?.id);
+  window.addEventListener("scroll", sectionNavigationUpdate, { passive: true });
+  window.addEventListener("resize", sectionNavigationUpdate);
+  sectionNavigationUpdate();
 }
 
 function setupSession() {
-  const login = $("#login-form");
-  const logout = $("#logout");
-  const role = login.elements.role.value;
-  const identifier = login.elements.identifier;
-  const password = login.elements.password;
-  const submit = login.querySelector('[type="submit"]');
-
-  const fields = {
-    student: ["RUT", "12.345.678-5", "text"],
-    admin: ["Correo electrónico", "", "email"],
-  };
-  const [label, placeholder, type] = fields[role];
-  $("#login-identifier-label").textContent = label;
-  identifier.type = type;
-  identifier.placeholder = placeholder;
-  login.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (sessionChanging) return;
-    const credentials = Object.fromEntries(new FormData(login));
-    credentials.identifier = credentials.identifier.trim();
-    sessionChanging = true;
-    submit.disabled = true;
-    showLoginMessage();
-    try {
-      await api("/login", "POST", credentials);
-      password.value = "";
-      await refreshState(true);
-    } catch (error) {
-      password.value = "";
-      showLoginMessage(error.message);
-    } finally {
-      sessionChanging = false;
-      submit.disabled = false;
-    }
-  });
-  logout.addEventListener("click", async () => {
-    if (sessionChanging) return;
-    sessionChanging = true;
-    logout.disabled = true;
-    try {
-      await api("/logout", "POST");
-      endSession();
-      login.reset();
-      identifier.focus();
-    } catch (error) {
-      displayError(error);
-    } finally {
-      sessionChanging = false;
-      logout.disabled = false;
-    }
-  });
-
   const menuToggle = $(".menu-toggle");
   const mainNav = $("#main-nav");
   function showMenu(open) {
@@ -676,13 +702,25 @@ function setupSession() {
     if (event.target.closest("a")) showMenu(false);
   });
 
-  submit.disabled = true;
-  refreshState(true).catch((error) => {
-    endSession(error.status === 401 ? "" : error.message);
-  }).finally(() => { submit.disabled = false; });
+  const demoAccount = window.BIBLIOTECA_DATA.demoAccounts.find((account) => account.role === pageRole);
+  if (!demoAccount) {
+    showPageError(`No hay un perfil demo para la página ${pageRole}.`);
+    return;
+  }
+  api("/login", "POST", {
+    role: pageRole,
+    identifier: demoAccount.identifier,
+    password: demoAccount.password,
+  }).then(() => refreshState(true)).catch((error) => showPageError(error.message));
 
   window.addEventListener("pageshow", (event) => {
-    if (event.persisted) refreshState(true).catch((error) => endSession(error.status === 401 ? "" : error.message));
+    if (event.persisted) {
+      api("/login", "POST", {
+        role: pageRole,
+        identifier: demoAccount.identifier,
+        password: demoAccount.password,
+      }).then(() => refreshState(true)).catch((error) => showPageError(error.message));
+    }
   });
   window.addEventListener("storage", (event) => {
     if (event.key !== localApp?.storageKey) return;

@@ -135,14 +135,14 @@
   }
 
   function publicLoan(loan, today) {
-    const { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt } = loan;
+    const { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId } = loan;
     const status = isReturned(loan) ? "Devuelto" : dueDate < today ? "Vencido" : "Activo";
-    return { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, status };
+    return { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId, status };
   }
 
   function publicRequest(request) {
-    const { id, type, student, bookId, bookTitle, loanId, status, createdAt } = request;
-    return { id, type, student, bookId, bookTitle, loanId, status, createdAt };
+    const { id, type, student, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested, ticketId } = request;
+    return { id, type, student, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested: Boolean(ticketRequested), ticketId };
   }
 
   function publicReview(review, actor) {
@@ -171,10 +171,10 @@
     return book;
   }
 
-  function issueLoan(state, book, { user, studentId, loanDate, dueDate }, today, createId) {
+  function issueLoan(state, book, { user, studentId, loanDate, dueDate, ticketId }, today, createId) {
     const loan = {
       id: createId(), user, studentId, bookId: book.id, bookTitle: book.title,
-      loanDate, dueDate, returnedAt: null, status: dueDate < today ? "Vencido" : "Activo",
+      loanDate, dueDate, ticketId: ticketId || null, returnedAt: null, status: dueDate < today ? "Vencido" : "Activo",
     };
     book.available -= 1;
     state.loans.push(loan);
@@ -210,8 +210,27 @@
       throw new Error("Faltan los datos locales de la biblioteca. Comprueba que data.js se haya cargado antes que local.js.");
     }
 
+    function reconcileInventory(state) {
+      let changed = false;
+      for (const original of seed.initialBooks) {
+        const book = state.books.find((item) => item.id === original.id);
+        if (!book) continue;
+        const untrackedSeedCopies = Math.max(0, original.total - original.available);
+        const activeLoans = state.loans.filter((loan) => loan.bookId === book.id && !isReturned(loan)).length;
+        const untrackedCopies = Math.min(
+          untrackedSeedCopies,
+          Math.max(0, book.total - book.available - activeLoans),
+        );
+        if (untrackedCopies > 0) {
+          book.available += untrackedCopies;
+          changed = true;
+        }
+      }
+      return changed;
+    }
+
     function freshState() {
-      return {
+      const state = {
         books: structuredClone(seed.initialBooks),
         reviews: [],
         loans: [],
@@ -219,6 +238,8 @@
         audit: [],
         users: structuredClone(seed.demoAccounts),
       };
+      reconcileInventory(state);
+      return state;
     }
 
     function readState() {
@@ -235,6 +256,7 @@
         state.loans ||= [];
         state.requests ||= [];
         state.audit ||= [];
+        const inventoryReconciled = reconcileInventory(state);
         let addedDemoAccount = false;
         for (const account of seed.demoAccounts) {
           if (!state.users.some((user) => user.id === account.id)) {
@@ -242,7 +264,7 @@
             addedDemoAccount = true;
           }
         }
-        if (addedDemoAccount) writeState(state);
+        if (addedDemoAccount || inventoryReconciled) writeState(state);
         return state;
       } catch {
         throw new Error("Los datos guardados de la biblioteca están dañados. Exporta una copia antes de restablecer el almacenamiento local.");
@@ -406,8 +428,20 @@
           if (body.type !== "loan" && body.type !== "return") failure(400, "invalid_request_type", "Selecciona un tipo de solicitud válido.");
           let book;
           let loan;
+          let dueDate;
+          let ticketRequested = false;
+          const current = now();
+          const today = schoolDate.format(current);
           if (body.type === "loan") {
             book = availableBook(state, body.bookId);
+            dueDate = dateField(body.dueDate);
+            if (dueDate < today || dueDate > dueAfterTwoWeeks(today)) {
+              failure(400, "invalid_due_date", "Elige una fecha de devolución entre hoy y los próximos 14 días.");
+            }
+            if (body.ticketRequested !== undefined && typeof body.ticketRequested !== "boolean") {
+              failure(400, "invalid_ticket_option", "Indica si necesitas un ticket físico.");
+            }
+            ticketRequested = body.ticketRequested === true;
           } else {
             loan = findRecord(state.loans, body.loanId, "El préstamo");
             if (loan.studentId !== actor.id) failure(403, "forbidden", "Solo puedes solicitar la devolución de tus propios préstamos.");
@@ -421,8 +455,8 @@
           if (duplicate) failure(409, "duplicate_request", "Ya tienes una petición pendiente para este movimiento.");
           state.requests.push({
             id: createId(), type: body.type, studentId: actor.id, student: actor.name,
-            bookId: book.id, bookTitle: book.title, loanId: loan?.id, status: "Pendiente",
-            createdAt: schoolDate.format(now()),
+            bookId: book.id, bookTitle: book.title, loanId: loan?.id, dueDate, ticketRequested, ticketId: null,
+            status: "Pendiente", createdAt: today,
           });
         });
       }
@@ -436,7 +470,11 @@
           const today = schoolDate.format(current);
           if (body.approve && request.type === "loan") {
             const book = availableBook(state, request.bookId);
-            issueLoan(state, book, { user: request.student, studentId: request.studentId, loanDate: today, dueDate: dueAfterTwoWeeks(today) }, today, createId);
+            const dueDate = request.dueDate || dueAfterTwoWeeks(today);
+            if (dueDate < today) failure(409, "request_due_date_expired", "La fecha elegida ya pasó. Rechaza esta petición para que el estudiante pueda enviar otra.");
+            const ticketId = request.ticketRequested ? `JMC-${createId()}` : null;
+            issueLoan(state, book, { user: request.student, studentId: request.studentId, loanDate: today, dueDate, ticketId }, today, createId);
+            request.ticketId = ticketId;
           }
           if (body.approve && request.type === "return") {
             const loan = findRecord(state.loans, request.loanId, "El préstamo");

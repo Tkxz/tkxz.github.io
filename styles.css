@@ -8,8 +8,8 @@
   --green-dark: #233e32;
   --orange: #e99361;
   --line: #e7e6de;
-  --serif: "Segoe UI", Arial, sans-serif;
-  --sans: "Segoe UI", Arial, sans-serif;
+  --serif: Arial, Helvetica, sans-serif;
+  --sans: Arial, Helvetica, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -23,6 +23,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .brand { display: inline-flex; align-items: center; gap: 11px; }
 .brand-mark { width: 39px; height: 39px; color: var(--green); display: grid; place-items: center; }
 .brand-mark svg { width: 34px; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
+.brand-mark img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
 .brand-copy { display: grid; gap: 3px; }
 .brand-copy strong { font-size: 13px; letter-spacing: -.02em; }
 .brand-copy small { color: #777d75; font-size: 10px; letter-spacing: .015em; }
@@ -192,6 +193,29 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .dialog-copy .dialog-author { margin: 0; color: #90948d; font-size: 10px; }
 .dialog-meta { display: flex; gap: 12px; margin: 15px 0; color: var(--green); font-size: 9px; }
 .availability-note { padding-top: 12px; border-top: 1px solid var(--line); font-size: 10px !important; }
+.student-loan-form { display: grid; gap: 12px; margin-top: 18px; }
+.student-loan-form .form-field { font-size: 12px; }
+.student-loan-form .form-field input { width: 100%; font-size: 14px; }
+.ticket-option { display: flex; align-items: flex-start; gap: 9px; color: var(--ink); font-size: 12px; }
+.ticket-option input { margin: 3px 0 0; accent-color: var(--green); }
+.ticket-dialog { position: fixed; width: min(440px, calc(100% - 32px)); max-width: 440px; border: 1px solid var(--line); border-radius: 5px; padding: 28px; background: var(--paper); color: var(--ink); box-shadow: 0 22px 80px rgba(23, 38, 29, .3); }
+.ticket-dialog::backdrop { background: rgba(21, 33, 26, .58); }
+.ticket-content { padding: 20px; border: 1px dashed #879287; background: var(--white); }
+.ticket-brand { display: flex; align-items: center; gap: 10px; color: var(--green); font-size: 13px; font-weight: 700; }
+.ticket-brand img { width: 42px; height: 42px; object-fit: contain; border-radius: 50%; }
+.ticket-content h2 { margin: 18px 0; font-size: 21px; }
+.ticket-content dl { display: grid; gap: 12px; margin: 0; }
+.ticket-content dl div { display: grid; gap: 3px; }
+.ticket-content dt { color: #788078; font-size: 11px; }
+.ticket-content dd { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.ticket-print-button { width: 100%; margin-top: 16px; }
+@media print {
+  body * { visibility: hidden !important; }
+  #ticket-dialog[open], #ticket-dialog[open] * { visibility: visible !important; }
+  #ticket-dialog[open] { position: absolute; inset: 0 auto auto 0; width: 80mm; max-width: 80mm; margin: 0; border: 0; padding: 0; box-shadow: none; }
+  #ticket-dialog .dialog-close, #ticket-dialog .ticket-print-button { display: none !important; }
+  #ticket-dialog .ticket-content { border: 1px dashed #333; }
+}
 
 @media (min-width: 1400px) {
   .hero { padding-left: max(10.5%, calc((100% - 1120px) / 2)); padding-right: max(10.5%, calc((100% - 1120px) / 2)); }
@@ -350,28 +374,25 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 }
 .catalog-rating { margin-top: 5px !important; color: #b77b3f !important; font-weight: 600; }
 
-/* Inicio de sesión y panel del estudiante */
-.portal-gate { min-height: calc(100dvh - 88px); display: grid; place-items: center; padding: 32px 20px; }
-.login-card { width: min(100%, 440px); padding: clamp(24px, 5vw, 38px); border: 1px solid var(--line); background: var(--white); }
-.login-card h1 { margin: 0 0 24px; font: 650 clamp(28px, 6vw, 38px)/1.15 var(--serif); }
-.login-card form { display: grid; gap: 15px; margin-bottom: 20px; }
-.login-card form input, .login-card form select { min-height: 44px; font-size: 16px; }
-.login-card .action-button { min-height: 44px; font-size: 15px; }
+/* Panel del estudiante */
 .form-error { grid-column: 1 / -1; margin: 0; color: #a13c30; font-size: 14px; }
-.login-card .form-error { margin-bottom: 12px; }
-.session-nav { display: flex; align-items: center; gap: 12px; }
-.session-nav span { color: var(--muted); max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.session-nav button { white-space: nowrap; }
 [hidden] { display: none !important; }
 .student-dashboard { padding-top: 68px; padding-bottom: 25px; }
+.student-details { padding-top: 25px; }
+.student-details-heading { display: flex; align-items: center; gap: 16px; margin-bottom: 34px; }
+.student-details-heading img { width: 68px; height: 68px; object-fit: contain; border-radius: 50%; }
+.student-details-heading h2 { margin: 0; font-size: clamp(24px, 2.2vw, 32px); }
+.student-dashboard,
+.catalog-section,
+.student-details { scroll-margin-top: 88px; }
 .student-toolbar { margin: 25px 0; }
 .student-toolbar strong { margin-left: 5px; }
 .student-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 22px 0 35px; }
 .student-request-area { display: grid; gap: 15px; }
+.student-review-area { margin-top: 48px; }
 .student-request-area h3 { margin: 0 0 5px; font: 600 21px var(--serif); }
 .student-request-area > div:first-child p { margin: 0; color: #8a9088; font-size: 10px; }
 #pending-request-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 5px; border-radius: 50%; background: #edf1e9; color: var(--green); font-size: 9px; }
-#student-book-request { margin-top: 18px; }
 #student-book-request:disabled { opacity: .5; cursor: not-allowed; }
 @media (min-width: 821px) {
   .main-nav { gap: clamp(7px, 1.2vw, 22px); }
@@ -380,7 +401,6 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
   .main-nav .nav-cta { display: none; }
 }
 @media (max-width: 820px) {
-  .session-nav { justify-content: space-between; margin-top: 10px; }
   .main-nav.is-open { max-height: min(380px, 65dvh); overflow-y: auto; }
 }
 @media (max-width: 680px) {
@@ -390,7 +410,7 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 
 
 /* Accesibilidad tipográfica: mayor tamaño, contraste y lectura cómoda. */
-body { font-family: "Segoe UI", Arial, sans-serif; font-size: 16px; line-height: 1.55; -webkit-font-smoothing: auto; }
+body { font-family: var(--sans); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: auto; }
 :root { --muted: #555f58; }
 .brand-copy strong { font-size: 16px; }
 .brand-copy small { font-size: 12px; color: #505a52; }
