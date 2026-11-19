@@ -50,19 +50,19 @@
         <div class="management-panel active" id="panel-inventory" role="tabpanel">
           <div class="panel-toolbar"><div><h3>Inventario de libros</h3><p>Control de existencias y estado físico de cada título.</p></div><button class="action-button" id="add-book" type="button">＋ Registrar libro</button></div>
           <div class="table-tools"><input id="inventory-search" type="search" placeholder="Buscar por título, autor o ISBN"><select id="inventory-filter" aria-label="Filtrar inventario"><option value="all">Todos los estados</option><option value="available">Con disponibilidad</option><option value="low">Pocas existencias</option><option value="out">Agotados</option></select></div>
-          <div class="table-scroll"><table><thead><tr><th>Libro</th><th>ISBN</th><th>Total</th><th>Disponibles</th><th>Prestados</th><th>Estado físico</th><th>Acciones</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
+          <div class="table-scroll" role="region" aria-label="Inventario de libros" tabindex="0"><table><thead><tr><th>Libro</th><th>ISBN</th><th>Total</th><th>Disponibles</th><th>Prestados</th><th>Estado físico</th><th>Acciones</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
           <p class="module-empty" id="inventory-empty" hidden>No hay libros que coincidan con la búsqueda.</p>
         </div>
         <div class="management-panel" id="panel-loans" role="tabpanel" hidden>
           <div class="panel-toolbar"><div><h3>Préstamos y devoluciones</h3><p>Registra movimientos y supervisa las fechas de devolución.</p></div><button class="action-button" id="add-loan" type="button">＋ Nuevo préstamo</button></div>
           <div class="table-tools"><input id="loan-search" type="search" placeholder="Buscar por usuario o libro"><select id="loan-filter" aria-label="Filtrar préstamos"><option value="all">Todos los préstamos vigentes</option><option value="Activo">Activos</option><option value="Vencido">Vencidos</option></select></div>
-          <div class="table-scroll"><table><thead><tr><th>Solicitante</th><th>Libro</th><th>Fecha préstamo</th><th>Fecha límite</th><th>Ticket</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="loans-body"></tbody></table></div>
+          <div class="table-scroll" role="region" aria-label="Préstamos y devoluciones" tabindex="0"><table><thead><tr><th>Solicitante</th><th>Libro</th><th>Fecha préstamo</th><th>Fecha límite</th><th>Ticket</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="loans-body"></tbody></table></div>
           <p class="module-empty" id="loans-empty" hidden>No hay préstamos vigentes.</p>
         </div>
         <div class="management-panel" id="panel-requests" role="tabpanel" hidden>
           <div class="panel-toolbar"><div><h3>Peticiones de estudiantes</h3><p>Aprueba préstamos y confirma devoluciones solicitadas.</p></div></div>
           <div class="table-tools"><select id="request-filter" aria-label="Filtrar peticiones"><option value="all">Todas las peticiones</option><option value="Pendiente">Pendientes</option><option value="Aprobada">Aprobadas</option><option value="Rechazada">Rechazadas</option></select></div>
-          <div class="table-scroll"><table><thead><tr><th>Estudiante</th><th>Libro</th><th>Solicitud</th><th>Fecha solicitud</th><th>Devolución</th><th>Ticket</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="requests-body"></tbody></table></div><p class="module-empty" id="requests-empty" hidden>No hay peticiones registradas.</p>
+          <div class="table-scroll" role="region" aria-label="Peticiones de estudiantes" tabindex="0"><table><thead><tr><th>Estudiante</th><th>Libro</th><th>Solicitud</th><th>Fecha solicitud</th><th>Devolución</th><th>Ticket</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="requests-body"></tbody></table></div><p class="module-empty" id="requests-empty" hidden>No hay peticiones registradas.</p>
         </div>
         <div class="management-panel" id="panel-reviews" role="tabpanel" hidden>
           <div class="panel-toolbar"><div><h3>Opiniones de lectores</h3><p>Valoraciones y comentarios asociados a cada libro.</p></div><button class="action-button" id="add-review" type="button">＋ Escribir reseña</button></div>
