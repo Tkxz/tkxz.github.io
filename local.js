@@ -4,7 +4,7 @@
   if (root) root.BibliotecaLocal = api;
 })(typeof globalThis === "object" ? globalThis : this, function () {
   const storageKey = "biblioteca-local-v1";
-  const sessionStorageKey = `${storageKey}-session`;
+  const seedCatalogVersion = 2;
   const conditions = ["Nuevo", "Bueno", "Regular", "Deteriorado"];
   const schoolDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit",
@@ -17,35 +17,6 @@
   function generateId() {
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
     return `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  }
-
-  function normalizeRut(value) {
-    if (typeof value !== "string") return null;
-    const parts = /^(\d{1,8}|\d{1,3}(?:\.\d{3}){1,2})-?([\dk])$/i.exec(value.trim());
-    if (!parts) return null;
-    const number = Number(parts[1].replaceAll(".", ""));
-    if (number < 1 || number > 99999999) return null;
-    let sum = 0;
-    let factor = 2;
-    for (let digits = number; digits > 0; digits = Math.floor(digits / 10)) {
-      sum += (digits % 10) * factor;
-      factor = factor === 7 ? 2 : factor + 1;
-    }
-    const remainder = (11 - sum % 11) % 11;
-    const verifier = remainder === 10 ? "K" : String(remainder);
-    return verifier === parts[2].toUpperCase() ? `${number}-${verifier}` : null;
-  }
-
-  function normalizeIdentifier(role, identifier) {
-    if (role === "student") return normalizeRut(identifier);
-    if (role !== "admin" || typeof identifier !== "string") return null;
-    const email = identifier.trim().toLowerCase();
-    if (email.length > 254) return null;
-    const [local, domain, extra] = email.split("@");
-    if (extra !== undefined || !domain || local.length > 64) return null;
-    if (!/^[a-z0-9_%+'-]+(?:\.[a-z0-9_%+'-]+)*$/.test(local)) return null;
-    if (!/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(domain)) return null;
-    return email;
   }
 
   function publicUser({ id, identifier, role, name }) {
@@ -130,8 +101,8 @@
   }
 
   function catalogBook(book) {
-    const { id, title, author, category, age, pages, cover, description, isbn, publisher, year, available, condition } = book;
-    return { id, title, author, category, age, pages, cover, description, isbn, publisher, year, available, condition };
+    const { id, title, author, category, pages, cover, description, isbn, publisher, year, available, condition } = book;
+    return { id, title, author, category, pages, cover, description, isbn, publisher, year, available, condition };
   }
 
   function publicLoan(loan, today) {
@@ -195,7 +166,7 @@
 
   function createLocalApp({
     storage = globalThis.localStorage,
-    sessions = globalThis.sessionStorage,
+    role,
     seed = globalThis.BIBLIOTECA_DATA,
     now = () => new Date(),
     createId = generateId,
@@ -203,11 +174,11 @@
     if (!storage || typeof storage.getItem !== "function" || typeof storage.setItem !== "function") {
       throw new Error("Este navegador no permite almacenamiento local. Abre la biblioteca en un navegador con localStorage habilitado.");
     }
-    if (!sessions || typeof sessions.getItem !== "function" || typeof sessions.setItem !== "function" || typeof sessions.removeItem !== "function") {
-      throw new Error("Este navegador no permite sesiones por pestaña. Abre la biblioteca en un navegador con sessionStorage habilitado.");
-    }
-    if (!seed || !Array.isArray(seed.initialBooks) || !Array.isArray(seed.demoAccounts) || !Array.isArray(seed.prohibitedExpressions)) {
+    if (!seed || !Array.isArray(seed.initialBooks) || !Array.isArray(seed.prohibitedExpressions)) {
       throw new Error("Faltan los datos locales de la biblioteca. Comprueba que data.js se haya cargado antes que local.js.");
+    }
+    if (role !== "student" && role !== "admin") {
+      throw new Error("Indica si esta página corresponde a estudiantes o administración.");
     }
 
     function reconcileInventory(state) {
@@ -236,10 +207,31 @@
         loans: [],
         requests: [],
         audit: [],
-        users: structuredClone(seed.demoAccounts),
+        seedCatalogVersion,
       };
       reconcileInventory(state);
       return state;
+    }
+
+    function migrateSeedCatalog(state) {
+      if (Number(state.seedCatalogVersion) >= seedCatalogVersion) return false;
+      const booksById = new Map(state.books.map((book) => [book.id, book]));
+      const validCovers = new Set(seed.initialBooks.map((book) => book.cover).filter(Boolean));
+      for (const original of seed.initialBooks) {
+        const book = booksById.get(original.id);
+        if (!book) {
+          const addedBook = structuredClone(original);
+          state.books.push(addedBook);
+          booksById.set(addedBook.id, addedBook);
+          continue;
+        }
+        if (typeof book.author !== "string" || !book.author.trim() || /^autor no identificado$/i.test(book.author.trim())) {
+          book.author = original.author;
+        }
+        if (!validCovers.has(book.cover)) book.cover = original.cover || "cover-1";
+      }
+      state.seedCatalogVersion = seedCatalogVersion;
+      return true;
     }
 
     function readState() {
@@ -251,20 +243,32 @@
       }
       try {
         const state = JSON.parse(serialized);
-        if (!state || !Array.isArray(state.books) || !Array.isArray(state.users)) throw new TypeError();
+        if (!state || !Array.isArray(state.books)) throw new TypeError();
         state.reviews ||= [];
         state.loans ||= [];
         state.requests ||= [];
         state.audit ||= [];
-        const inventoryReconciled = reconcileInventory(state);
-        let addedDemoAccount = false;
-        for (const account of seed.demoAccounts) {
-          if (!state.users.some((user) => user.id === account.id)) {
-            state.users.push(structuredClone(account));
-            addedDemoAccount = true;
+        const seedCatalogMigrated = migrateSeedCatalog(state);
+        const legacyStudentIds = new Set(
+          (Array.isArray(state.users) ? state.users : [])
+            .filter((user) => user.role === "student")
+            .map((user) => user.id),
+        );
+        const hadUsers = Object.hasOwn(state, "users");
+        if (legacyStudentIds.size) {
+          for (const loan of state.loans) {
+            if (legacyStudentIds.has(loan.studentId)) loan.studentId = "local-student";
+          }
+          for (const request of state.requests) {
+            if (legacyStudentIds.has(request.studentId)) request.studentId = "local-student";
+          }
+          for (const review of state.reviews) {
+            if (legacyStudentIds.has(review.ownerId)) review.ownerId = "local-student";
           }
         }
-        if (addedDemoAccount || inventoryReconciled) writeState(state);
+        delete state.users;
+        const inventoryReconciled = reconcileInventory(state);
+        if (hadUsers || inventoryReconciled || seedCatalogMigrated) writeState(state);
         return state;
       } catch {
         throw new Error("Los datos guardados de la biblioteca están dañados. Exporta una copia antes de restablecer el almacenamiento local.");
@@ -289,9 +293,13 @@
       return result;
     }
 
-    function currentUser(state) {
-      const sessionUserId = sessions.getItem(sessionStorageKey);
-      return state.users.find((user) => user.id === sessionUserId) || null;
+    function pageUser() {
+      return {
+        id: `local-${role}`,
+        identifier: "",
+        role,
+        name: role === "student" ? "Estudiante" : "Administración",
+      };
     }
 
     function reviewFields(state, actor, input, previous) {
@@ -331,7 +339,7 @@
           const current = now();
           const book = {
             ...validateBook(body, state.books),
-            id: createId(), cover: "cover-1", age: "Lectura general", pages: "", registeredAt: current.toISOString(),
+            id: createId(), cover: "cover-1", pages: "", registeredAt: current.toISOString(),
           };
           state.books.push(book);
           auditEntry(state, actor, current, "Crear libro", "libro", book.id, book.title, createId);
@@ -399,17 +407,9 @@
           const loanDate = dateField(body.loanDate);
           const dueDate = dateField(body.dueDate);
           if (dueDate < loanDate) failure(400, "invalid_date_range", "La fecha límite debe ser igual o posterior al préstamo.");
-          const studentRut = textField(body.studentRut, "El RUT", { min: 0, max: 20 });
-          let student;
-          if (studentRut) {
-            const identifier = normalizeRut(studentRut);
-            if (!identifier) failure(400, "invalid_rut", "Ingresa un RUT de estudiante válido.");
-            student = state.users.find((user) => user.role === "student" && user.identifier === identifier);
-            if (!student) failure(404, "student_not_found", "No existe una cuenta de estudiante con ese RUT.");
-          }
-          const user = student?.name ?? textField(body.user, "El nombre del solicitante");
+          const user = textField(body.user, "El nombre del estudiante");
           const current = now();
-          const loan = issueLoan(state, book, { user, studentId: student?.id ?? null, loanDate, dueDate }, schoolDate.format(current), createId);
+          const loan = issueLoan(state, book, { user, studentId: null, loanDate, dueDate }, schoolDate.format(current), createId);
           auditEntry(state, actor, current, "Registrar préstamo", "préstamo", loan.id, book.title, createId);
         });
       }
@@ -488,27 +488,10 @@
       failure(404, "NOT_FOUND", "No se encontró lo solicitado.");
     }
 
-    async function request(path, method = "GET", body, actorId) {
-      if (method === "POST" && path === "/login") {
-        const { role, identifier, password } = body || {};
-        if (role !== "student" && role !== "admin") failure(400, "INVALID_ROLE", "Selecciona un rol válido.");
-        const normalized = normalizeIdentifier(role, identifier);
-        if (!normalized) failure(401, "BAD_CREDENTIALS", "Identificador o contraseña incorrectos.");
-        const state = readState();
-        const user = state.users.find((account) => account.role === role && account.identifier === normalized && account.password === password);
-        if (!user) failure(401, "BAD_CREDENTIALS", "Identificador o contraseña incorrectos.");
-        sessions.setItem(sessionStorageKey, user.id);
-        return { user: publicUser(user) };
-      }
-      if (method === "POST" && path === "/logout") {
-        sessions.removeItem(sessionStorageKey);
-        return;
-      }
-
+    async function request(path, method = "GET", body) {
       const state = readState();
-      const actor = currentUser(state);
+      const actor = pageUser();
       requireRole(actor, "student", "admin");
-      if (actorId !== undefined && actorId !== actor.id) failure(409, "SESSION_CHANGED", "La sesión cambió. Revisa el usuario activo antes de continuar.");
       if (method === "GET" && path === "/state") return getState(actor);
       if (method === "GET" && path === "/audit") {
         requireRole(actor, "admin");
@@ -529,5 +512,5 @@
     return { request, storageKey };
   }
 
-  return { createLocalApp, normalizeRut, storageKey };
+  return { createLocalApp, storageKey };
 });

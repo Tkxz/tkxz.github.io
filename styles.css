@@ -124,12 +124,11 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .book-card, .dialog-copy { overflow-wrap: anywhere; }
 .book-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .book-category { color: var(--green); font-size: 8px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-.book-age { color: #a0a39c; font-size: 9px; }
-.book-cover { height: 185px; position: relative; display: grid; place-items: center; overflow: hidden; border-radius: 2px; }
+.book-cover { width: 100%; height: 185px; position: relative; display: grid; place-items: center; overflow: hidden; border: 0; border-radius: 2px; padding: 18px 12px 48px; color: inherit; cursor: pointer; appearance: none; }
 .cover-art { position: relative; overflow: hidden; }
-.cover-art::before, .cover-art::after { content: ""; position: absolute; }
+.cover-art::before, .cover-art::after { content: ""; position: absolute; z-index: 0; pointer-events: none; }
 .cover-title { position: relative; z-index: 1; max-width: 82%; color: var(--cover-text, #fff5dc); font: 600 21px/1.12 var(--serif); text-align: center; text-transform: uppercase; letter-spacing: -.02em; white-space: pre-line; }
-.cover-author { position: absolute; z-index: 1; left: 8%; right: 8%; bottom: 12px; color: var(--cover-text, #fff5dc); font-size: 7px; text-align: center; text-transform: uppercase; letter-spacing: .12em; opacity: .8; }
+.cover-author { position: absolute; z-index: 1; left: 6%; right: 6%; bottom: 10px; padding: 5px 7px; border-radius: 2px; background: rgba(0, 0, 0, .3); color: #fff5dc; font-size: 10px; line-height: 1.35; text-align: center; text-transform: uppercase; letter-spacing: .08em; }
 .cover-1 { background: #405c4b; --cover-text: #f4e3bf; }
 .cover-1::before { width: 110px; height: 110px; right: -14px; top: -21px; border: 1px solid rgba(242,223,174,.42); border-radius: 50%; box-shadow: 0 0 0 13px rgba(242,223,174,.07), 0 0 0 29px rgba(242,223,174,.06); }
 .cover-1::after { left: -15px; right: -10px; height: 67px; bottom: -27px; background: #d18c60; border-radius: 50% 50% 0 0; transform: rotate(-8deg); }
@@ -424,7 +423,6 @@ body { font-family: var(--sans); font-size: 16px; line-height: 1.55; -webkit-fon
 .filter-chip span { font-size: 11px; }
 .search-box input, .table-tools input, .table-tools select { font-size: 14px; }
 .book-category { font-size: 11px; }
-.book-age { font-size: 12px; color: #626b64; }
 .book-info p, .cover-author { font-size: 11px; }
 .book-info h3 { font-size: 16px; }
 .catalog-footer, .empty-state { font-size: 14px; }

@@ -18,7 +18,7 @@ const formatDate = (value) => {
 
 let data = { user: null, books: [], reviews: [], requests: [], loans: [] };
 let stateRequest = 0;
-let sessionVersion = 0;
+let renderVersion = 0;
 let localApp;
 const NAV_ACTIVATION_OFFSET = 48;
 
@@ -30,9 +30,9 @@ function toast(message, type = "success") {
   setTimeout(() => item.remove(), 3600);
 }
 
-async function api(path, method = "GET", body, actorId) {
-  localApp ||= window.BibliotecaLocal.createLocalApp({ seed: window.BIBLIOTECA_DATA });
-  return localApp.request(path, method, body, actorId);
+async function api(path, method = "GET", body) {
+  localApp ||= window.BibliotecaLocal.createLocalApp({ role: pageRole, seed: window.BIBLIOTECA_DATA });
+  return localApp.request(path, method, body);
 }
 
 function roleAllowsPage(role) {
@@ -44,8 +44,8 @@ function showPageError(message = "") {
   if (message) toast(message, "error");
 }
 
-function clearRenderedSession() {
-  sessionVersion += 1;
+function clearRenderedData() {
+  renderVersion += 1;
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   if (sectionNavigationUpdate) {
     window.removeEventListener("scroll", sectionNavigationUpdate);
@@ -65,17 +65,17 @@ function clearRenderedSession() {
   $("#main-nav").classList.remove("is-open");
 }
 
-function setPageAccess() {
-  clearRenderedSession();
+function renderPage() {
+  clearRenderedData();
   const user = data.user;
-  const authorized = Boolean(user && roleAllowsPage(user.role));
-  $("#main-nav").hidden = !authorized;
-  $(".menu-toggle").hidden = !authorized;
-  document.querySelectorAll("#main-nav a").forEach((link) => { link.hidden = !authorized; });
-  $("#app-main").hidden = !authorized;
+  const pageMatchesRole = Boolean(user && roleAllowsPage(user.role));
+  $("#main-nav").hidden = !pageMatchesRole;
+  $(".menu-toggle").hidden = !pageMatchesRole;
+  document.querySelectorAll("#main-nav a").forEach((link) => { link.hidden = !pageMatchesRole; });
+  $("#app-main").hidden = !pageMatchesRole;
 
-  if (!authorized) {
-    showPageError(user ? "El perfil activo no coincide con esta página." : "");
+  if (!pageMatchesRole) {
+    showPageError(user ? "El perfil configurado no coincide con esta página." : "No se pudo cargar el perfil configurado para esta página.");
     return;
   }
 
@@ -98,13 +98,6 @@ function setPageAccess() {
   setupSectionNavigation();
 }
 
-function endSession(message = "") {
-  stateRequest += 1;
-  data = { user: null, books: [], reviews: [], requests: [], loans: [] };
-  setPageAccess();
-  showPageError(message);
-}
-
 async function refreshState(applyAccess = false) {
   const request = ++stateRequest;
   const next = await api("/state").catch((error) => {
@@ -113,7 +106,7 @@ async function refreshState(applyAccess = false) {
   if (request !== stateRequest) return;
   if (applyAccess || data.user?.id !== next.user?.id || data.user?.role !== next.user?.role) {
     data = next;
-    setPageAccess();
+    renderPage();
   } else {
     data = next;
     if (roleAllowsPage(data.user?.role)) renderAll();
@@ -121,15 +114,7 @@ async function refreshState(applyAccess = false) {
 }
 
 function displayError(error, region) {
-  if (error.status === 401) {
-    endSession("La vista temporal terminó. Recarga la página para volver a abrirla.");
-  } else if (error.code === "SESSION_CHANGED") {
-    endSession(error.message);
-    refreshState().catch((refreshError) => {
-      if (refreshError.status !== 401) showPageError(refreshError.message);
-    });
-    toast(error.message, "error");
-  } else if (region) {
+  if (region) {
     region.textContent = error.message;
     region.hidden = false;
   } else {
@@ -138,7 +123,7 @@ function displayError(error, region) {
 }
 
 async function mutate(path, method, body, message) {
-  await api(path, method, body, data.user.id);
+  await api(path, method, body);
   try {
     await refreshState();
   } catch (error) {
@@ -191,7 +176,7 @@ function renderCatalog(resetScroll = false) {
   grid.innerHTML = visible.map((book) => {
     const rating = ratingSummary(book.id);
     return `<article class="book-card">
-      <div class="book-card-top"><span class="book-category">${escapeHTML(book.category)}</span><span class="book-age">${escapeHTML(book.age || "")}</span></div>
+      <div class="book-card-top"><span class="book-category">${escapeHTML(book.category)}</span></div>
       <button class="book-cover cover-art ${escapeHTML(book.cover || "cover-1")}" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver detalles de ${escapeHTML(book.title)}"><span class="cover-title">${escapeHTML(book.title)}</span><span class="cover-author">${escapeHTML(book.author)}</span></button>
       <div class="book-info"><div><h3>${escapeHTML(book.title)}</h3><p>${escapeHTML(book.author)} · ${book.available} disponibles</p><p class="catalog-rating">${rating.count ? `★ ${rating.average.toFixed(1)} (${rating.count} reseñas)` : "Sin valoraciones"}</p></div>
       <button class="book-arrow" type="button" data-book="${escapeHTML(book.id)}" aria-label="Más información de ${escapeHTML(book.title)}">↗</button></div></article>`;
@@ -216,7 +201,7 @@ function showBookDetails(id) {
   $("#dialog-author").textContent = `Por ${book.author}`;
   $("#dialog-description").textContent = book.description || "Sin descripción disponible.";
   const rating = ratingSummary(book.id);
-  $("#dialog-meta").textContent = [book.age, book.pages, `${book.available} ejemplares disponibles`, rating.count ? `★ ${rating.average.toFixed(1)}/5 (${rating.count} reseñas)` : "Sin valoraciones"].filter(Boolean).join(" · ");
+  $("#dialog-meta").textContent = [book.pages, `${book.available} ejemplares disponibles`, rating.count ? `★ ${rating.average.toFixed(1)}/5 (${rating.count} reseñas)` : "Sin valoraciones"].filter(Boolean).join(" · ");
   $(".availability-note").textContent = `Estado físico: ${book.condition || "No especificado"}. ISBN: ${book.isbn || "No registrado"}.`;
   $("#student-loan-form")?.remove();
   if (data.user?.role === "student") {
@@ -417,23 +402,23 @@ function renderAll() {
 
 async function loadHistory() {
   if (data.user?.role !== "admin") return;
-  const session = sessionVersion;
+  const version = renderVersion;
   const empty = $("#audit-empty");
   empty.hidden = false;
   empty.textContent = "Cargando historial…";
   $("#audit-body").replaceChildren();
   try {
     const { entries } = await api("/audit");
-    if (session !== sessionVersion) return;
+    if (version !== renderVersion) return;
     $("#audit-body").innerHTML = entries.map(({ at, action, target, actor }) => `<tr>
       <td><time datetime="${escapeHTML(at)}">${dateTime.format(new Date(at))}</time></td>
       <td>${escapeHTML(action)}</td><td>${escapeHTML(target.label)}<small>${escapeHTML(target.id)}</small></td>
-      <td>${escapeHTML(actor.name)}</td><td>${escapeHTML(roleNames[actor.role] || actor.role)}</td><td>${escapeHTML(actor.identifier)}</td>
+      <td>${escapeHTML(actor.name)}</td><td>${escapeHTML(roleNames[actor.role] || actor.role)}</td><td>${escapeHTML(actor.identifier || "—")}</td>
     </tr>`).join("");
     empty.textContent = "Aún no hay acciones registradas.";
     empty.hidden = entries.length > 0;
   } catch (error) {
-    if (session === sessionVersion) displayError(error, empty);
+    if (version === renderVersion) displayError(error, empty);
   }
 }
 
@@ -528,8 +513,7 @@ function addLoan() {
   const today = dateToday();
   const due = new Date(Date.parse(today) + 14 * 86400000).toISOString().slice(0, 10);
   openForm("Registrar préstamo", [
-    { name: "studentRut", label: "RUT si es un estudiante con cuenta", maxlength: 20, required: false },
-    { name: "user", label: "Nombre del solicitante si no ingresas RUT", maxlength: 100, required: false },
+    { name: "user", label: "Nombre del estudiante", maxlength: 100 },
     { name: "bookId", label: "Libro", type: "select", options },
     { name: "loanDate", label: "Fecha de préstamo", type: "date", value: today },
     { name: "dueDate", label: "Fecha límite de devolución", type: "date", value: due },
@@ -689,7 +673,7 @@ function setupSectionNavigation() {
   sectionNavigationUpdate();
 }
 
-function setupSession() {
+function setupPage() {
   const menuToggle = $(".menu-toggle");
   const mainNav = $("#main-nav");
   function showMenu(open) {
@@ -702,32 +686,16 @@ function setupSession() {
     if (event.target.closest("a")) showMenu(false);
   });
 
-  const demoAccount = window.BIBLIOTECA_DATA.demoAccounts.find((account) => account.role === pageRole);
-  if (!demoAccount) {
-    showPageError(`No hay un perfil demo para la página ${pageRole}.`);
-    return;
-  }
-  api("/login", "POST", {
-    role: pageRole,
-    identifier: demoAccount.identifier,
-    password: demoAccount.password,
-  }).then(() => refreshState(true)).catch((error) => showPageError(error.message));
-
+  refreshState(true).catch((error) => showPageError(error.message));
   window.addEventListener("pageshow", (event) => {
-    if (event.persisted) {
-      api("/login", "POST", {
-        role: pageRole,
-        identifier: demoAccount.identifier,
-        password: demoAccount.password,
-      }).then(() => refreshState(true)).catch((error) => showPageError(error.message));
-    }
+    if (event.persisted) refreshState(true).catch((error) => showPageError(error.message));
   });
   window.addEventListener("storage", (event) => {
     if (event.key !== localApp?.storageKey) return;
-    refreshState(true).catch((error) => endSession(error.status === 401 ? "" : error.message));
+    refreshState(true).catch((error) => showPageError(error.message));
   });
 }
 
 $("#current-year").textContent = new Date().getFullYear();
 bindUI();
-setupSession();
+setupPage();
