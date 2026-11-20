@@ -896,7 +896,9 @@ function showReturnTicket(id) {
   $("#ticket-book").textContent = data.books.find((book) => book.id === loan.bookId)?.title || loan.bookTitle || "Libro eliminado";
   $("#ticket-loan-date").textContent = formatDate(loan.loanDate);
   $("#ticket-due-date").textContent = formatDate(loan.dueDate);
-  $("#ticket-returned-at").textContent = dateTime.format(new Date(loan.returnedAt));
+  $("#ticket-returned-at").textContent = loan.returnedAt.length === 10
+    ? `${formatDate(loan.returnedAt)} (hora no registrada)`
+    : dateTime.format(new Date(loan.returnedAt));
   $("#ticket-returned-at").classList.remove("return-date--late", "return-date--on-time");
   $("#ticket-returned-at").classList.add(dateClass);
   $("#ticket-return-status").textContent = late ? "Devuelto fuera de plazo" : "Devuelto dentro del plazo";

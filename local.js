@@ -236,6 +236,44 @@
       return true;
     }
 
+    function migrateReturnTickets(state, createId) {
+      let changed = false;
+      for (const loan of state.loans) {
+        if (!isReturned(loan)) continue;
+        const returnRequests = state.requests.filter((request) => request.type === "return" && request.loanId === loan.id);
+        const returnRequestIds = new Set(returnRequests.map((request) => request.id));
+        const returnEntries = state.audit.filter((entry) =>
+          (entry.action === "Registrar devolución" && entry.target?.id === loan.id)
+          || (entry.action === "Aprobar petición" && returnRequestIds.has(entry.target?.id)));
+        const returnEntry = returnEntries.find((entry) => entry.action === "Registrar devolución") || returnEntries[0];
+        const recordedTicket = returnEntries.find((entry) => entry.details?.ticketType === "return" && entry.details.ticketId)?.details.ticketId;
+        const requestTicket = returnRequests.find((request) => request.ticketId?.startsWith("JMC-D-"))?.ticketId;
+        const ticketId = loan.returnTicketId || recordedTicket || requestTicket || `JMC-D-${createId()}`;
+        const returnTimestamp = returnEntry?.at ? new Date(returnEntry.at) : null;
+
+        if (loan.returnTicketId !== ticketId) {
+          loan.returnTicketId = ticketId;
+          changed = true;
+        }
+        if ((!loan.returnedAt || loan.returnedAt.length === 10) && returnTimestamp && !Number.isNaN(returnTimestamp.valueOf())) {
+          loan.returnedAt = returnTimestamp.toISOString();
+          changed = true;
+        }
+        for (const request of returnRequests) {
+          if (request.status === "Aprobada" && request.ticketId !== ticketId) {
+            request.ticketId = ticketId;
+            changed = true;
+          }
+        }
+        for (const entry of returnEntries) {
+          if (entry.details?.ticketId === ticketId && entry.details.ticketType === "return" && entry.details.loanId === loan.id) continue;
+          entry.details = { ...entry.details, ticketId, ticketType: "return", loanId: loan.id };
+          changed = true;
+        }
+      }
+      return changed;
+    }
+
     function readState() {
       const serialized = storage.getItem(storageKey);
       if (serialized === null) {
@@ -251,6 +289,7 @@
         state.requests ||= [];
         state.audit ||= [];
         const seedCatalogMigrated = migrateSeedCatalog(state);
+        const returnTicketsMigrated = migrateReturnTickets(state, createId);
         const legacyStudentIds = new Set(
           (Array.isArray(state.users) ? state.users : [])
             .filter((user) => user.role === "student")
@@ -270,7 +309,7 @@
         }
         delete state.users;
         const inventoryReconciled = reconcileInventory(state);
-        if (hadUsers || inventoryReconciled || seedCatalogMigrated) writeState(state);
+        if (hadUsers || inventoryReconciled || seedCatalogMigrated || returnTicketsMigrated) writeState(state);
         return state;
       } catch {
         throw new Error("Los datos guardados de la biblioteca están dañados. Exporta una copia antes de restablecer el almacenamiento local.");
