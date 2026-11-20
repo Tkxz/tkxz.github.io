@@ -183,11 +183,54 @@ function ratingSummary(bookId) {
   return { count: reviews.length, average: reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0 };
 }
 
+function primaryCategory(category) {
+  return String(category || "").split("/")[0].trim();
+}
+
+function renderCategoryFilters() {
+  const filterList = $(".filter-list");
+  if (!filterList) return;
+
+  const selected = filterList.querySelector(".filter-chip.selected")?.dataset.category || "Todos";
+  const counts = new Map();
+  data.books.forEach((book) => {
+    const category = primaryCategory(book.category);
+    if (category) counts.set(category, (counts.get(category) || 0) + 1);
+  });
+
+  const categories = [...counts.entries()].sort(([a], [b]) => a.localeCompare(b, "es"));
+  filterList.innerHTML = [
+    `<button class="filter-chip${selected === "Todos" ? " selected" : ""}" type="button" data-category="Todos" aria-pressed="${selected === "Todos"}">Todos <span>${data.books.length}</span></button>`,
+    ...categories.map(([category, count]) =>
+      `<button class="filter-chip${selected === category ? " selected" : ""}" type="button" data-category="${escapeHTML(category)}" aria-pressed="${selected === category}">${escapeHTML(category)} <span>${count}</span></button>`
+    ),
+  ].join("");
+
+  if (selected !== "Todos" && !counts.has(selected)) {
+    const todos = filterList.querySelector("[data-category='Todos']");
+    filterList.querySelector(".selected")?.classList.remove("selected");
+    todos?.classList.add("selected");
+    todos?.setAttribute("aria-pressed", "true");
+  }
+
+  requestAnimationFrame(() => {
+    const active = filterList.querySelector(".filter-chip.selected");
+    if (!active) return;
+    const listRect = filterList.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    if (activeRect.right > listRect.right) filterList.scrollLeft += activeRect.right - listRect.right + 8;
+    if (activeRect.left < listRect.left) filterList.scrollLeft -= listRect.left - activeRect.left + 8;
+  });
+}
+
 function renderCatalog(resetScroll = false) {
   const grid = $("#book-grid");
   const query = $("#book-search").value.trim().toLocaleLowerCase("es");
   const selected = $(".filter-chip.selected")?.dataset.category || "Todos";
-  const visible = data.books.filter((book) => (selected === "Todos" || book.category === selected) && `${book.title} ${book.author} ${book.category} ${book.isbn}`.toLocaleLowerCase("es").includes(query));
+  const visible = data.books.filter((book) =>
+    (selected === "Todos" || primaryCategory(book.category) === selected)
+    && `${book.title} ${book.author} ${book.category} ${book.isbn}`.toLocaleLowerCase("es").includes(query)
+  );
   grid.innerHTML = visible.map((book) => {
     const rating = ratingSummary(book.id);
     return `<article class="book-card">
@@ -431,6 +474,7 @@ function renderReviews() {
 
 function renderAll() {
   if (data.user.role === "student") {
+    renderCategoryFilters();
     renderCatalog();
     renderStudentPanel();
   }
@@ -615,7 +659,14 @@ function bindUI() {
   document.querySelectorAll(".filter-chip").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.classList.contains("selected")));
   });
-  $(".filter-list")?.addEventListener("click", (event) => {
+  const filterList = $(".filter-list");
+  filterList?.addEventListener("wheel", (event) => {
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      event.preventDefault();
+      filterList.scrollLeft += event.deltaY;
+    }
+  }, { passive: false });
+  filterList?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-category]");
     if (!button) return;
     const previous = $(".filter-chip.selected");
