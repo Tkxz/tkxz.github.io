@@ -397,7 +397,7 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .student-toolbar strong { margin-left: 5px; }
 .student-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 22px 0 35px; }
 .student-request-area { display: grid; gap: 15px; }
-.student-request-area .table-scroll { max-height: min(65vh, 600px); overflow: auto; }
+.student-request-area .table-scroll { max-height: min(45vh, 360px); overflow: auto; }
 .student-request-area .table-scroll th { position: sticky; top: 0; z-index: 1; }
 .student-review-area { margin-top: 48px; }
 .student-request-area h3 { margin: 0 0 5px; font: 600 21px var(--serif); }

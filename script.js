@@ -419,7 +419,7 @@ function renderStudentPanel() {
     ...requests.map((item) => ({ item, when: item.createdAt, dueDate: item.dueDate, ticketId: item.ticketId, ticketRequested: item.ticketRequested, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
     ...loans.map((item) => ({ item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, label: "Préstamo", returnable: item.status !== "Devuelto" })),
   ];
-  const hasReturnAction = (item) => item.returnable
+  const hasReturnAction = (item) => Boolean(item.returnable)
     && !requests.some((request) => request.type === "return" && request.loanId === item.id && request.status === "Pendiente");
   rows.sort((a, b) => Number(hasReturnAction(b.item)) - Number(hasReturnAction(a.item)) || b.when.localeCompare(a.when));
   $("#student-requests-body").innerHTML = rows.map(({ item, when, dueDate, ticketId, ticketRequested, label, returnable }) => {
