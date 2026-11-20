@@ -402,9 +402,12 @@
           const review = findRecord(state.reviews, id, "La reseña");
           const title = state.books.find((book) => book.id === review.bookId)?.title ?? review.bookTitle;
           const label = title ? `Reseña de ${review.user} sobre «${title}»` : `Reseña de ${review.user}`;
+          const ticketId = `JMC-R-${createId()}`;
           state.reviews = state.reviews.filter((record) => record.id !== id);
           auditEntry(state, actor, now(), "Eliminar reseña", "reseña", id, label, createId, {
+            ticketId,
             studentName: review.user,
+            bookTitle: title || "Libro eliminado",
             comment: review.comment,
           });
         });

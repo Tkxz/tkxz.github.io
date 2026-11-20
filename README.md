@@ -18,6 +18,8 @@ Al registrar un préstamo desde administración también se puede generar e impr
 
 Al eliminar una reseña, el historial de administración conserva el comentario y el nombre de alumno que tenía asociado para poder consultarlos después. Como esta versión no tiene autenticación, el nombre de estudiante configurado actualmente es genérico.
 
+Cada reseña eliminada también recibe un ticket de moderación imprimible, disponible desde la columna Ticket del historial.
+
 La lista de préstamos en administración muestra solo préstamos vigentes. Al registrar una devolución, el ejemplar vuelve al inventario y los contadores se actualizan; los préstamos devueltos se conservan en el historial del estudiante.
 
 Este modo es solo para desarrollo y pruebas: las páginas y los datos del navegador no están protegidos para producción. No uses información personal. La autenticación, el servidor y la base de datos se incorporarán más adelante.

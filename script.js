@@ -17,6 +17,7 @@ const formatDate = (value) => {
 };
 
 let data = { user: null, books: [], reviews: [], requests: [], loans: [] };
+let auditEntries = [];
 let stateRequest = 0;
 let renderVersion = 0;
 let localApp;
@@ -46,6 +47,7 @@ function showPageError(message = "") {
 
 function clearRenderedData() {
   renderVersion += 1;
+  auditEntries = [];
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   if (sectionNavigationUpdate) {
     window.removeEventListener("scroll", sectionNavigationUpdate);
@@ -54,9 +56,21 @@ function clearRenderedData() {
   }
   document.querySelectorAll("#management-form, #inventory-body, #loans-body, #requests-body, #audit-body, #student-requests-body, #management-stats, #student-summary, #book-grid, #review-list, #student-review-list, #student-name, #review-book-filter, #student-review-book-filter")
     .forEach((region) => region.replaceChildren());
-  ["ticket-id", "ticket-student", "ticket-book", "ticket-loan-date", "ticket-due-date"].forEach((id) => {
+  ["ticket-id", "ticket-student", "ticket-book", "ticket-loan-date", "ticket-due-date", "ticket-comment"].forEach((id) => {
     const field = $(`#${id}`);
     if (field) field.textContent = "";
+  });
+  const ticketCommentField = $("#ticket-comment-field");
+  if (ticketCommentField) ticketCommentField.hidden = true;
+  [
+    ["ticket-heading", "Ticket de préstamo"],
+    ["ticket-student-label", "Estudiante"],
+    ["ticket-book-label", "Libro"],
+    ["ticket-loan-date-label", "Fecha de préstamo"],
+    ["ticket-due-date-label", "Fecha de devolución"],
+  ].forEach(([id, value]) => {
+    const field = $(`#${id}`);
+    if (field) field.textContent = value;
   });
   $("#management-form").onsubmit = null;
   const menuToggle = $(".menu-toggle");
@@ -304,11 +318,39 @@ function showLoanTicket(id) {
     toast("No hay un ticket disponible para este préstamo.", "error");
     return;
   }
+  $("#ticket-heading").textContent = "Ticket de préstamo";
+  $("#ticket-student-label").textContent = "Estudiante";
+  $("#ticket-book-label").textContent = "Libro";
+  $("#ticket-loan-date-label").textContent = "Fecha de préstamo";
+  $("#ticket-due-date-label").textContent = "Fecha de devolución";
+  $("#ticket-comment-field").hidden = true;
   $("#ticket-id").textContent = loan.ticketId;
   $("#ticket-student").textContent = loan.user;
   $("#ticket-book").textContent = data.books.find((book) => book.id === loan.bookId)?.title || loan.bookTitle || "Libro eliminado";
   $("#ticket-loan-date").textContent = formatDate(loan.loanDate);
   $("#ticket-due-date").textContent = formatDate(loan.dueDate);
+  $("#ticket-dialog").showModal();
+}
+
+function showReviewTicket(id) {
+  const entry = auditEntries.find((item) => item.id === id);
+  const details = entry?.details;
+  if (!details?.ticketId) {
+    toast("No hay un ticket disponible para esta reseña eliminada.", "error");
+    return;
+  }
+  $("#ticket-heading").textContent = "Ticket de moderación";
+  $("#ticket-student-label").textContent = "Alumno";
+  $("#ticket-book-label").textContent = "Libro";
+  $("#ticket-loan-date-label").textContent = "Eliminado por";
+  $("#ticket-due-date-label").textContent = "Fecha de eliminación";
+  $("#ticket-id").textContent = details.ticketId;
+  $("#ticket-student").textContent = details.studentName || "—";
+  $("#ticket-book").textContent = details.bookTitle || "Libro eliminado";
+  $("#ticket-loan-date").textContent = entry.actor.name;
+  $("#ticket-due-date").textContent = dateTime.format(new Date(entry.at));
+  $("#ticket-comment").textContent = details.comment || "";
+  $("#ticket-comment-field").hidden = false;
   $("#ticket-dialog").showModal();
 }
 
@@ -411,14 +453,18 @@ async function loadHistory() {
   try {
     const { entries } = await api("/audit");
     if (version !== renderVersion) return;
-    $("#audit-body").innerHTML = entries.map(({ at, action, target, actor, details }) => {
+    auditEntries = entries;
+    $("#audit-body").innerHTML = entries.map(({ id, at, action, target, actor, details }) => {
       const request = data.requests.find((item) => item.id === target.id);
       const ticketLoan = data.loans.find((loan) => loan.id === target.id)
         || (request?.ticketId && data.loans.find((loan) => loan.ticketId === request.ticketId));
-      const ticket = ticketLoan?.ticketId
+      const ticket = details?.ticketId
+        ? `<button class="table-action" type="button" data-view-review-ticket="${escapeHTML(id)}">${escapeHTML(details.ticketId)}</button>`
+        : ticketLoan?.ticketId
         ? `<button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">${escapeHTML(ticketLoan.ticketId)}</button>`
         : "—";
-      const studentName = action === "Eliminar reseña" ? details?.studentName || "—" : "—";
+      const legacyStudentName = /^Reseña de (.+?)(?: sobre «|$)/.exec(target.label)?.[1];
+      const studentName = action === "Eliminar reseña" ? details?.studentName || legacyStudentName || "—" : "—";
       const deletedComment = action === "Eliminar reseña" && details?.comment
         ? `<small>Comentario eliminado: ${escapeHTML(details.comment)}</small>`
         : "";
@@ -639,6 +685,11 @@ function bindUI() {
   });
   $("#request-filter")?.addEventListener("change", renderRequests);
   $("#audit-body")?.addEventListener("click", (event) => {
+    const reviewTicketButton = event.target.closest("[data-view-review-ticket]");
+    if (reviewTicketButton) {
+      showReviewTicket(reviewTicketButton.dataset.viewReviewTicket);
+      return;
+    }
     const button = event.target.closest("[data-view-ticket]");
     if (button) showLoanTicket(button.dataset.viewTicket);
   });

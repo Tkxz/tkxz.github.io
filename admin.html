@@ -11,8 +11,8 @@
     <title>Administración | Biblioteca Escolar JMC</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="data.js" defer></script>
-    <script src="local.js?v=13eb138" defer></script>
-    <script src="script.js?v=13eb138" defer></script>
+    <script src="local.js?v=review-ticket-1" defer></script>
+    <script src="script.js?v=review-ticket-1" defer></script>
   </head>
   <body data-role="admin">
     <header class="site-header">
@@ -118,10 +118,11 @@
         <h2 id="ticket-heading">Ticket de préstamo</h2>
         <dl>
           <div><dt>Identificador</dt><dd id="ticket-id"></dd></div>
-          <div><dt>Estudiante</dt><dd id="ticket-student"></dd></div>
-          <div><dt>Libro</dt><dd id="ticket-book"></dd></div>
-          <div><dt>Fecha de préstamo</dt><dd id="ticket-loan-date"></dd></div>
-          <div><dt>Fecha de devolución</dt><dd id="ticket-due-date"></dd></div>
+          <div><dt id="ticket-student-label">Estudiante</dt><dd id="ticket-student"></dd></div>
+          <div><dt id="ticket-book-label">Libro</dt><dd id="ticket-book"></dd></div>
+          <div><dt id="ticket-loan-date-label">Fecha de préstamo</dt><dd id="ticket-loan-date"></dd></div>
+          <div><dt id="ticket-due-date-label">Fecha de devolución</dt><dd id="ticket-due-date"></dd></div>
+          <div id="ticket-comment-field" hidden><dt>Comentario eliminado</dt><dd id="ticket-comment"></dd></div>
         </dl>
       </div>
       <button class="action-button ticket-print-button" id="ticket-print" type="button">Imprimir ticket</button>
