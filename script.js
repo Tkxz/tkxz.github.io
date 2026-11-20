@@ -688,23 +688,44 @@ function primaryCategory(category) {
   return String(category || "").split("/")[0].trim();
 }
 
+const catalogFilterCategories = [
+  "Cuentos y leyendas",
+  "Divulgación",
+  "Literatura Infantil",
+  "Misterio y fantasía",
+  "Narrativa",
+  "Poesía",
+  "Teatro",
+];
+
+function catalogFilterCategory(book) {
+  const category = primaryCategory(book.category).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es");
+  if (/^(teatro|artes escenicas)/.test(category)) return "Teatro";
+  if (/^(poesia|prosa poetica)/.test(category)) return "Poesía";
+  if (/^(cuento|folclore|leyenda|mito|fabula)/.test(category)) return "Cuentos y leyendas";
+  if (/infantil/.test(category)) return "Literatura Infantil";
+  if (/^(divulgacion|biografia|ecologia|educacion|ensayo|filosofia|geografia|historia|naturaleza|no ficcion|referencia|religion)/.test(category)) return "Divulgación";
+  if (/misterio|fantasia|ciencia ficcion|policial|aventura/.test(category)) return "Misterio y fantasía";
+  return "Narrativa";
+}
+
 function renderCategoryFilters() {
   const filterList = $(".filter-list");
   if (!filterList) return;
 
   const selected = filterList.querySelector(".filter-chip.selected")?.dataset.category || "Todos";
-  const counts = new Map();
+  const counts = new Map(catalogFilterCategories.map((category) => [category, 0]));
   data.books.forEach((book) => {
-    const category = primaryCategory(book.category);
-    if (category) counts.set(category, (counts.get(category) || 0) + 1);
+    const category = catalogFilterCategory(book);
+    counts.set(category, counts.get(category) + 1);
   });
 
-  const categories = [...counts.entries()].sort(([a], [b]) => a.localeCompare(b, "es"));
   filterList.innerHTML = [
     `<button class="filter-chip${selected === "Todos" ? " selected" : ""}" type="button" data-category="Todos" aria-pressed="${selected === "Todos"}">Todos <span>${data.books.length}</span></button>`,
-    ...categories.map(([category, count]) =>
-      `<button class="filter-chip${selected === category ? " selected" : ""}" type="button" data-category="${escapeHTML(category)}" aria-pressed="${selected === category}">${escapeHTML(category)} <span>${count}</span></button>`
-    ),
+    ...catalogFilterCategories.map((category) => {
+      const count = counts.get(category);
+      return `<button class="filter-chip${selected === category ? " selected" : ""}" type="button" data-category="${escapeHTML(category)}" aria-pressed="${selected === category}">${escapeHTML(category)} <span>${count}</span></button>`;
+    }),
   ].join("");
 
   if (selected !== "Todos" && !counts.has(selected)) {
@@ -729,7 +750,7 @@ function renderCatalog(resetScroll = false) {
   const query = $("#book-search").value.trim().toLocaleLowerCase("es");
   const selected = $(".filter-chip.selected")?.dataset.category || "Todos";
   const visible = data.books.filter((book) =>
-    (selected === "Todos" || primaryCategory(book.category) === selected)
+    (selected === "Todos" || catalogFilterCategory(book) === selected)
     && `${book.title} ${book.author} ${book.category} ${book.isbn}`.toLocaleLowerCase("es").includes(query)
   );
   grid.innerHTML = visible.map((book) => {
