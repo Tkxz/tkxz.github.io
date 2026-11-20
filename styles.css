@@ -375,6 +375,20 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .form-field input[type="checkbox"] { width: auto; min-height: 0; padding: 0; accent-color: var(--green); }
 .form-field textarea { min-height: 95px; resize: vertical; }
 .form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 9px; margin-top: 8px; }
+.delete-confirm-dialog { position: fixed; width: min(460px, calc(100% - 32px)); max-width: 460px; border: 1px solid var(--line); border-radius: 12px; padding: 30px; background: var(--paper); color: var(--ink); box-shadow: 0 22px 80px rgba(23, 38, 29, .3); }
+.delete-confirm-dialog::backdrop { background: rgba(21, 33, 26, .58); backdrop-filter: blur(3px); }
+.delete-confirm-dialog .dialog-eyebrow { color: #9c574c; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.delete-confirm-dialog h2 { margin: 8px 30px 10px 0; font: 600 25px var(--serif); }
+.delete-confirm-dialog > p { margin: 0; color: #69736b; font-size: 14px; line-height: 1.6; }
+.delete-confirm-book { display: block; margin-top: 14px; color: var(--ink); font-size: 15px; }
+.delete-confirm-dialog form { display: grid; gap: 16px; margin-top: 22px; }
+.delete-confirm-check { display: flex; align-items: flex-start; gap: 10px; color: #526055; font-size: 13px; line-height: 1.5; cursor: pointer; }
+.delete-confirm-check input { flex: 0 0 auto; width: 17px; height: 17px; margin: 1px 0 0; accent-color: #a64d3e; }
+.delete-confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.danger-confirm-button { min-height: 42px; padding: 0 18px; border: 1px solid #a64d3e; border-radius: 7px; background: #a64d3e; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+.danger-confirm-button:disabled { border-color: #d3b5af; background: #d3b5af; cursor: not-allowed; }
+.return-date--late { color: #a33e32 !important; font-weight: 700; }
+.return-date--on-time { color: #287348 !important; font-weight: 700; }
 .toast-region { position: fixed; z-index: 30; right: 20px; bottom: 20px; display: grid; gap: 8px; width: min(340px, calc(100% - 40px)); }
 .toast { padding: 13px 16px; border: 1px solid #dce5d9; border-left: 3px solid var(--green); background: #fffefa; color: #405447; box-shadow: 0 8px 24px rgba(23, 38, 29, .1); font-size: 10px; line-height: 1.5; }
 .toast.error { border-color: #efd8d1; border-left-color: #b45d4f; color: #934c40; }
@@ -391,6 +405,9 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
   .management-dialog { padding: 23px 18px; }
   .management-dialog form { grid-template-columns: 1fr; }
   .form-field:has(textarea), .form-actions { grid-column: auto; }
+  .delete-confirm-dialog { padding: 24px 20px; }
+  .delete-confirm-actions { flex-direction: column-reverse; }
+  .delete-confirm-actions button { width: 100%; min-height: 44px; }
 }
 .catalog-rating { margin-top: 5px !important; color: #b77b3f !important; font-weight: 600; }
 

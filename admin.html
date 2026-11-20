@@ -97,6 +97,21 @@
       <button class="dialog-close" id="management-dialog-close" type="button" aria-label="Cerrar">×</button>
       <h2 id="management-dialog-title">Formulario</h2><form id="management-form"></form>
     </dialog>
+    <dialog class="delete-confirm-dialog" id="delete-confirm-dialog" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-description">
+      <button class="dialog-close" id="delete-confirm-close" type="button" aria-label="Cerrar">×</button>
+      <span class="dialog-eyebrow">Confirmar eliminación</span>
+      <h2 id="delete-confirm-title">¿Eliminar este libro?</h2>
+      <p id="delete-confirm-description">Esta acción eliminará el libro del inventario y no se puede deshacer.</p>
+      <strong class="delete-confirm-book" id="delete-confirm-book"></strong>
+      <form id="delete-confirm-form">
+        <label class="delete-confirm-check"><input id="delete-confirm-checkbox" type="checkbox" required><span>Sí, confirmo que quiero eliminar este libro.</span></label>
+        <p class="form-error" id="delete-confirm-error" role="alert" hidden></p>
+        <div class="delete-confirm-actions">
+          <button class="secondary-button" id="delete-confirm-cancel" type="button">Cancelar</button>
+          <button class="danger-confirm-button" id="delete-confirm-submit" type="submit" disabled>Eliminar libro</button>
+        </div>
+      </form>
+    </dialog>
     <dialog class="ticket-dialog" id="ticket-dialog" aria-labelledby="ticket-heading">
       <button class="dialog-close" id="ticket-dialog-close" type="button" aria-label="Cerrar ticket">×</button>
       <div class="ticket-content">
@@ -108,6 +123,8 @@
           <div><dt id="ticket-book-label">Libro</dt><dd id="ticket-book"></dd></div>
           <div><dt id="ticket-loan-date-label">Fecha de préstamo</dt><dd id="ticket-loan-date"></dd></div>
           <div><dt id="ticket-due-date-label">Fecha de devolución</dt><dd id="ticket-due-date"></dd></div>
+          <div id="ticket-returned-field" hidden><dt>Fecha y hora de devolución</dt><dd id="ticket-returned-at"></dd></div>
+          <div id="ticket-return-status-field" hidden><dt>Plazo</dt><dd id="ticket-return-status"></dd></div>
           <div id="ticket-comment-field" hidden><dt>Comentario eliminado</dt><dd id="ticket-comment"></dd></div>
         </dl>
       </div>

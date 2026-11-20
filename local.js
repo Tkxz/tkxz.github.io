@@ -106,9 +106,9 @@
   }
 
   function publicLoan(loan, today) {
-    const { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId } = loan;
+    const { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId, returnTicketId } = loan;
     const status = isReturned(loan) ? "Devuelto" : dueDate < today ? "Vencido" : "Activo";
-    return { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId, status };
+    return { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId, returnTicketId, status };
   }
 
   function publicRequest(request) {
@@ -153,11 +153,12 @@
     return loan;
   }
 
-  function registerReturn(state, loan, today) {
+  function registerReturn(state, loan, returnedAt, returnTicketId) {
     if (isReturned(loan)) failure(409, "already_returned", "Este préstamo ya fue devuelto.");
     const book = findRecord(state.books, loan.bookId, "El libro asociado al préstamo");
     book.available = Math.min(book.total, book.available + 1);
-    loan.returnedAt = today;
+    loan.returnedAt = returnedAt.toISOString();
+    loan.returnTicketId = returnTicketId;
     loan.status = "Devuelto";
     for (const request of state.requests) {
       if (request.type === "return" && request.loanId === loan.id && request.status === "Pendiente") request.status = "Aprobada";
@@ -436,8 +437,14 @@
         return update((state) => {
           const loan = findRecord(state.loans, id, "El préstamo");
           const current = now();
-          const book = registerReturn(state, loan, schoolDate.format(current));
-          auditEntry(state, actor, current, "Registrar devolución", "préstamo", id, book.title, createId);
+          const returnTicketId = `JMC-D-${createId()}`;
+          const book = registerReturn(state, loan, current, returnTicketId);
+          auditEntry(state, actor, current, "Registrar devolución", "préstamo", id, book.title, createId, {
+            ticketId: returnTicketId,
+            ticketType: "return",
+            loanId: loan.id,
+          });
+          return publicLoan(loan, schoolDate.format(current));
         });
       }
       if (collection === "requests" && method === "POST" && !id) {
@@ -480,13 +487,17 @@
             issueLoan(state, book, { user: request.student, studentId: request.studentId, loanDate: today, dueDate, ticketId }, today, createId);
             request.ticketId = ticketId;
           }
+          let auditDetails;
           if (body.approve && request.type === "return") {
             const loan = findRecord(state.loans, request.loanId, "El préstamo");
-            registerReturn(state, loan, today);
+            const returnTicketId = `JMC-D-${createId()}`;
+            registerReturn(state, loan, current, returnTicketId);
+            request.ticketId = returnTicketId;
+            auditDetails = { ticketId: returnTicketId, ticketType: "return", loanId: loan.id };
           }
           request.status = body.approve ? "Aprobada" : "Rechazada";
           const title = state.books.find((item) => item.id === request.bookId)?.title ?? request.bookTitle ?? "Libro";
-          auditEntry(state, actor, current, body.approve ? "Aprobar petición" : "Rechazar petición", "petición", id, title, createId);
+          auditEntry(state, actor, current, body.approve ? "Aprobar petición" : "Rechazar petición", "petición", id, title, createId, auditDetails);
         });
       }
       failure(404, "NOT_FOUND", "No se encontró lo solicitado.");

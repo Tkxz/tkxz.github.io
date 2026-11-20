@@ -134,6 +134,24 @@
       <button class="dialog-close" id="management-dialog-close" type="button" aria-label="Cerrar">×</button>
       <h2 id="management-dialog-title">Formulario</h2><form id="management-form"></form>
     </dialog>
+    <dialog class="ticket-dialog" id="ticket-dialog" aria-labelledby="ticket-heading">
+      <button class="dialog-close" id="ticket-dialog-close" type="button" aria-label="Cerrar ticket">×</button>
+      <div class="ticket-content">
+        <div class="ticket-brand"><img src="assets/logo-ejmc.png" alt="" /><span>Escuela José Miguel Carrera</span></div>
+        <h2 id="ticket-heading">Ticket de préstamo</h2>
+        <dl>
+          <div><dt>Identificador</dt><dd id="ticket-id"></dd></div>
+          <div><dt id="ticket-student-label">Estudiante</dt><dd id="ticket-student"></dd></div>
+          <div><dt id="ticket-book-label">Libro</dt><dd id="ticket-book"></dd></div>
+          <div><dt id="ticket-loan-date-label">Fecha de préstamo</dt><dd id="ticket-loan-date"></dd></div>
+          <div><dt id="ticket-due-date-label">Fecha de devolución</dt><dd id="ticket-due-date"></dd></div>
+          <div id="ticket-returned-field" hidden><dt>Fecha y hora de devolución</dt><dd id="ticket-returned-at"></dd></div>
+          <div id="ticket-return-status-field" hidden><dt>Plazo</dt><dd id="ticket-return-status"></dd></div>
+          <div id="ticket-comment-field" hidden><dt>Comentario eliminado</dt><dd id="ticket-comment"></dd></div>
+        </dl>
+      </div>
+      <button class="action-button ticket-print-button" id="ticket-print" type="button">Imprimir ticket</button>
+    </dialog>
     <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
   </body>
 </html>

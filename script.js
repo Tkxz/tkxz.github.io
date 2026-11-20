@@ -20,6 +20,13 @@ const formatDate = (value) => {
   if (value.length === 10) return new Date(`${value}T12:00:00`).toLocaleDateString("es-CL");
   return localDate.format(new Date(value)).split("-").reverse().join("-");
 };
+const isLateReturn = (loan) => {
+  if (!loan.returnedAt || !loan.dueDate) return false;
+  const returnDate = loan.returnedAt.length === 10
+    ? loan.returnedAt
+    : localDate.format(new Date(loan.returnedAt));
+  return returnDate > loan.dueDate;
+};
 
 let activeDatePicker = null;
 let activeSelectPicker = null;
@@ -527,10 +534,14 @@ function clearRenderedData() {
   }
   document.querySelectorAll("#management-form, #inventory-body, #loans-body, #requests-body, #audit-body, #student-requests-body, #management-stats, #student-summary, #book-grid, #review-list, #student-review-list, #student-name, #review-book-filter")
     .forEach((region) => region.replaceChildren());
-  ["ticket-id", "ticket-student", "ticket-book", "ticket-loan-date", "ticket-due-date", "ticket-comment"].forEach((id) => {
+  ["ticket-id", "ticket-student", "ticket-book", "ticket-loan-date", "ticket-due-date", "ticket-returned-at", "ticket-return-status", "ticket-comment"].forEach((id) => {
     const field = $(`#${id}`);
     if (field) field.textContent = "";
   });
+  $("#ticket-returned-field").hidden = true;
+  $("#ticket-return-status-field").hidden = true;
+  $("#ticket-returned-at")?.classList.remove("return-date--late", "return-date--on-time");
+  $("#ticket-return-status")?.classList.remove("return-date--late", "return-date--on-time");
   const ticketCommentField = $("#ticket-comment-field");
   if (ticketCommentField) ticketCommentField.hidden = true;
   [
@@ -853,12 +864,46 @@ function showLoanTicket(id) {
   $("#ticket-book-label").textContent = "Libro";
   $("#ticket-loan-date-label").textContent = "Fecha de préstamo";
   $("#ticket-due-date-label").textContent = "Fecha de devolución";
+  $("#ticket-returned-field").hidden = true;
+  $("#ticket-return-status-field").hidden = true;
+  $("#ticket-returned-at").classList.remove("return-date--late", "return-date--on-time");
+  $("#ticket-return-status").classList.remove("return-date--late", "return-date--on-time");
   $("#ticket-comment-field").hidden = true;
   $("#ticket-id").textContent = loan.ticketId;
   $("#ticket-student").textContent = loan.user;
   $("#ticket-book").textContent = data.books.find((book) => book.id === loan.bookId)?.title || loan.bookTitle || "Libro eliminado";
   $("#ticket-loan-date").textContent = formatDate(loan.loanDate);
   $("#ticket-due-date").textContent = formatDate(loan.dueDate);
+  $("#ticket-dialog").showModal();
+}
+
+function showReturnTicket(id) {
+  const loan = data.loans.find((item) => item.id === id);
+  if (!loan?.returnTicketId || !loan.returnedAt) {
+    toast("No hay un ticket de devolución disponible.", "error");
+    return;
+  }
+  const late = isLateReturn(loan);
+  const dateClass = late ? "return-date--late" : "return-date--on-time";
+  $("#ticket-heading").textContent = "Ticket de devolución";
+  $("#ticket-student-label").textContent = "Estudiante";
+  $("#ticket-book-label").textContent = "Libro";
+  $("#ticket-loan-date-label").textContent = "Fecha de préstamo";
+  $("#ticket-due-date-label").textContent = "Fecha límite elegida";
+  $("#ticket-comment-field").hidden = true;
+  $("#ticket-id").textContent = loan.returnTicketId;
+  $("#ticket-student").textContent = loan.user;
+  $("#ticket-book").textContent = data.books.find((book) => book.id === loan.bookId)?.title || loan.bookTitle || "Libro eliminado";
+  $("#ticket-loan-date").textContent = formatDate(loan.loanDate);
+  $("#ticket-due-date").textContent = formatDate(loan.dueDate);
+  $("#ticket-returned-at").textContent = dateTime.format(new Date(loan.returnedAt));
+  $("#ticket-returned-at").classList.remove("return-date--late", "return-date--on-time");
+  $("#ticket-returned-at").classList.add(dateClass);
+  $("#ticket-return-status").textContent = late ? "Devuelto fuera de plazo" : "Devuelto dentro del plazo";
+  $("#ticket-return-status").classList.remove("return-date--late", "return-date--on-time");
+  $("#ticket-return-status").classList.add(dateClass);
+  $("#ticket-returned-field").hidden = false;
+  $("#ticket-return-status-field").hidden = false;
   $("#ticket-dialog").showModal();
 }
 
@@ -874,6 +919,10 @@ function showReviewTicket(id) {
   $("#ticket-book-label").textContent = "Libro";
   $("#ticket-loan-date-label").textContent = "Eliminado por";
   $("#ticket-due-date-label").textContent = "Fecha de eliminación";
+  $("#ticket-returned-field").hidden = true;
+  $("#ticket-return-status-field").hidden = true;
+  $("#ticket-returned-at").classList.remove("return-date--late", "return-date--on-time");
+  $("#ticket-return-status").classList.remove("return-date--late", "return-date--on-time");
   $("#ticket-id").textContent = details.ticketId;
   $("#ticket-student").textContent = details.studentName || "—";
   $("#ticket-book").textContent = details.bookTitle || "Libro eliminado";
@@ -891,7 +940,10 @@ function renderRequests() {
     const book = data.books.find((item) => item.id === request.bookId);
     const type = request.type === "loan" ? "Préstamo" : "Devolución";
     const ticketLoan = request.ticketId ? data.loans.find((loan) => loan.ticketId === request.ticketId) : null;
-    const ticket = ticketLoan
+    const returnTicketLoan = request.ticketId ? data.loans.find((loan) => loan.returnTicketId === request.ticketId) : null;
+    const ticket = returnTicketLoan
+      ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-return-ticket="${escapeHTML(returnTicketLoan.id)}">Ver</button></div>`
+      : ticketLoan
       ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">Ver</button></div>`
       : request.type === "loan" ? `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>` : "—";
     const action = request.status === "Pendiente" ? `<div class="row-actions"><button type="button" data-approve-request="${escapeHTML(request.id)}">Aprobar</button><button type="button" class="danger-action" data-reject-request="${escapeHTML(request.id)}">Rechazar</button></div>` : "—";
@@ -911,16 +963,28 @@ function renderStudentPanel() {
 
   const rows = [
     ...requests.map((item) => ({ item, when: item.createdAt, dueDate: item.dueDate, ticketId: item.ticketId, ticketRequested: item.ticketRequested, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
-    ...loans.map((item) => ({ item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, label: "Préstamo" })),
+    ...loans.map((item) => ({ item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, returnTicketId: item.returnTicketId, returnedAt: item.returnedAt, label: "Préstamo" })),
   ];
   rows.sort((a, b) => b.when.localeCompare(a.when));
-  $("#student-requests-body").innerHTML = rows.map(({ item, when, dueDate, ticketId, ticketRequested, label }) => {
+  $("#student-requests-body").innerHTML = rows.map(({ item, dueDate, ticketId, returnTicketId, returnedAt, ticketRequested, label }) => {
     const book = data.books.find((entry) => entry.id === item.bookId);
-    const ticket = ticketId
-      ? escapeHTML(ticketId)
+    const returnTicketLoan = item.type === "return" && ticketId
+      ? data.loans.find((loan) => loan.returnTicketId === ticketId)
+      : null;
+    const loanTicket = ticketId && item.type !== "return" ? escapeHTML(ticketId)
       : item.type === "return" ? "—"
       : ticketRequested ? (item.status === "Pendiente" ? "Al aprobar" : "No generado") : "Se genera al aprobar";
-    return `<tr><td>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</td><td>${label}</td><td>${formatDate(when)}</td><td>${formatDate(dueDate)}</td><td>${ticket}</td><td>${statusPill(item.status)}</td></tr>`;
+    const returnTicket = returnTicketId
+      ? `<div class="row-actions"><span>${escapeHTML(returnTicketId)}</span><button class="table-action" type="button" data-view-return-ticket="${escapeHTML(item.id)}">Ver devolución</button></div>`
+      : returnTicketLoan
+        ? `<div class="row-actions"><span>${escapeHTML(ticketId)}</span><button class="table-action" type="button" data-view-return-ticket="${escapeHTML(returnTicketLoan.id)}">Ver devolución</button></div>`
+        : "";
+    const returnDate = returnedAt
+      ? `<small class="return-date ${isLateReturn(item) ? "return-date--late" : "return-date--on-time"}">Real: ${escapeHTML(returnedAt.length === 10 ? `${formatDate(returnedAt)} (hora no registrada)` : dateTime.format(new Date(returnedAt)))} · ${isLateReturn(item) ? "Fuera de plazo" : "A tiempo"}</small>`
+      : "";
+    const ticket = returnTicket ? `${item.type === "return" ? "" : `<small>Préstamo: ${loanTicket}</small>`}${returnTicket}`
+      : loanTicket;
+    return `<tr><td>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</td><td>${label}</td><td>${formatDate(item.createdAt || item.loanDate)}</td><td>${formatDate(dueDate)}${returnDate}</td><td>${ticket}</td><td>${statusPill(item.status)}</td></tr>`;
   }).join("");
   $("#student-requests-empty").hidden = rows.length > 0;
 }
@@ -992,9 +1056,14 @@ async function loadHistory() {
       const request = data.requests.find((item) => item.id === target.id);
       const ticketLoan = data.loans.find((loan) => loan.id === target.id)
         || (request?.ticketId && data.loans.find((loan) => loan.ticketId === request.ticketId));
-      const ticket = details?.ticketId
-        ? `<button class="table-action" type="button" data-view-review-ticket="${escapeHTML(id)}">${escapeHTML(details.ticketId)}</button>`
-        : ticketLoan?.ticketId
+      const returnTicketLoan = details?.ticketType === "return"
+        ? data.loans.find((loan) => loan.id === details.loanId)
+        : null;
+      const ticket = details?.ticketType === "return" && returnTicketLoan
+        ? `<button class="table-action" type="button" data-view-return-ticket="${escapeHTML(returnTicketLoan.id)}">${escapeHTML(details.ticketId)}</button>`
+        : details?.ticketId
+          ? `<button class="table-action" type="button" data-view-review-ticket="${escapeHTML(id)}">${escapeHTML(details.ticketId)}</button>`
+          : ticketLoan?.ticketId
         ? `<button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">${escapeHTML(ticketLoan.ticketId)}</button>`
         : "—";
       const legacyStudentName = /^Reseña de (.+?)(?: sobre «|$)/.exec(target.label)?.[1];
@@ -1103,6 +1172,56 @@ function bookFields(book = {}) {
   ];
 }
 
+function confirmBookDeletion(book) {
+  const dialog = $("#delete-confirm-dialog");
+  const form = $("#delete-confirm-form");
+  const checkbox = $("#delete-confirm-checkbox");
+  const submit = $("#delete-confirm-submit");
+  const cancel = $("#delete-confirm-cancel");
+  const close = $("#delete-confirm-close");
+  const errorRegion = $("#delete-confirm-error");
+  if (!dialog || !form || !checkbox || !submit || !cancel || !close || !errorRegion) {
+    toast("No se pudo abrir la confirmación para eliminar el libro.", "error");
+    return;
+  }
+
+  $("#delete-confirm-book").textContent = book.title;
+  checkbox.checked = false;
+  checkbox.disabled = false;
+  submit.disabled = true;
+  cancel.disabled = false;
+  close.disabled = false;
+  errorRegion.hidden = true;
+  errorRegion.textContent = "";
+  submit.dataset.busy = "false";
+  checkbox.onchange = () => { submit.disabled = !checkbox.checked; };
+  cancel.onclick = close.onclick = () => {
+    if (submit.dataset.busy !== "true") dialog.close();
+  };
+  dialog.oncancel = (event) => {
+    if (submit.dataset.busy === "true") event.preventDefault();
+  };
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    if (!checkbox.checked || submit.dataset.busy === "true") return;
+    submit.dataset.busy = "true";
+    submit.disabled = checkbox.disabled = cancel.disabled = close.disabled = true;
+    errorRegion.hidden = true;
+    try {
+      await mutate(`/books/${encodeURIComponent(book.id)}`, "DELETE", undefined, "Libro eliminado.");
+      dialog.close();
+    } catch (error) {
+      displayError(error, errorRegion);
+    } finally {
+      submit.dataset.busy = "false";
+      checkbox.disabled = cancel.disabled = close.disabled = false;
+      submit.disabled = !checkbox.checked;
+    }
+  };
+  dialog.showModal();
+  checkbox.focus();
+}
+
 function addOrEditBook(book) {
   openForm(book ? "Editar libro" : "Registrar nuevo libro", bookFields(book), (values) => {
     const path = book ? `/books/${encodeURIComponent(book.id)}` : "/books";
@@ -1197,8 +1316,8 @@ function bindUI() {
     const book = data.books.find(({ id }) => id === (edit?.dataset.editBook || remove?.dataset.deleteBook));
     if (!book) return;
     if (edit) addOrEditBook(book);
-    if (remove && confirm(`¿Eliminar el registro de «${book.title}»?`)) {
-      runAction(remove, () => mutate(`/books/${encodeURIComponent(book.id)}`, "DELETE", undefined, "Libro eliminado."));
+    if (remove) {
+      confirmBookDeletion(book);
     }
   });
   $("#inventory-search")?.addEventListener("input", renderInventory);
@@ -1212,13 +1331,21 @@ function bindUI() {
     }
     const button = event.target.closest("[data-return-loan]");
     if (button && confirm("¿Confirmar la devolución de este ejemplar?")) {
-      runAction(button, () => mutate(`/loans/${encodeURIComponent(button.dataset.returnLoan)}/return`, "POST", undefined, "Devolución registrada. Inventario actualizado."));
+      runAction(button, async () => {
+        const result = await mutate(`/loans/${encodeURIComponent(button.dataset.returnLoan)}/return`, "POST", undefined, "Devolución registrada. Inventario actualizado.");
+        if (result?.returnTicketId) showReturnTicket(result.id);
+      });
     }
   });
   $("#loan-search")?.addEventListener("input", renderLoans);
   $("#loan-filter")?.addEventListener("change", renderLoans);
 
   $("#requests-body")?.addEventListener("click", (event) => {
+    const returnTicketButton = event.target.closest("[data-view-return-ticket]");
+    if (returnTicketButton) {
+      showReturnTicket(returnTicketButton.dataset.viewReturnTicket);
+      return;
+    }
     const ticketButton = event.target.closest("[data-view-ticket]");
     if (ticketButton) {
       showLoanTicket(ticketButton.dataset.viewTicket);
@@ -1230,8 +1357,17 @@ function bindUI() {
     const id = button.dataset.approveRequest || button.dataset.rejectRequest;
     runAction(button, () => mutate(`/requests/${encodeURIComponent(id)}`, "PATCH", { approve }, approve ? "Petición aprobada." : "Petición rechazada."));
   });
+  $("#student-requests-body")?.addEventListener("click", (event) => {
+    const returnTicketButton = event.target.closest("[data-view-return-ticket]");
+    if (returnTicketButton) showReturnTicket(returnTicketButton.dataset.viewReturnTicket);
+  });
   $("#request-filter")?.addEventListener("change", renderRequests);
   $("#audit-body")?.addEventListener("click", (event) => {
+    const returnTicketButton = event.target.closest("[data-view-return-ticket]");
+    if (returnTicketButton) {
+      showReturnTicket(returnTicketButton.dataset.viewReturnTicket);
+      return;
+    }
     const reviewTicketButton = event.target.closest("[data-view-review-ticket]");
     if (reviewTicketButton) {
       showReviewTicket(reviewTicketButton.dataset.viewReviewTicket);
