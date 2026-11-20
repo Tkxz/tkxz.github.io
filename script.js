@@ -411,11 +411,19 @@ async function loadHistory() {
   try {
     const { entries } = await api("/audit");
     if (version !== renderVersion) return;
-    $("#audit-body").innerHTML = entries.map(({ at, action, target, actor }) => `<tr>
+    $("#audit-body").innerHTML = entries.map(({ at, action, target, actor }) => {
+      const request = data.requests.find((item) => item.id === target.id);
+      const ticketLoan = data.loans.find((loan) => loan.id === target.id)
+        || (request?.ticketId && data.loans.find((loan) => loan.ticketId === request.ticketId));
+      const ticket = ticketLoan?.ticketId
+        ? `<button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">${escapeHTML(ticketLoan.ticketId)}</button>`
+        : "—";
+      return `<tr>
       <td><time datetime="${escapeHTML(at)}">${dateTime.format(new Date(at))}</time></td>
-      <td>${escapeHTML(action)}</td><td>${escapeHTML(target.label)}<small>${escapeHTML(target.id)}</small></td>
+      <td>${escapeHTML(action)}</td><td>${escapeHTML(target.label)}<small>${escapeHTML(target.id)}</small></td><td>${ticket}</td>
       <td>${escapeHTML(actor.name)}</td><td>${escapeHTML(roleNames[actor.role] || actor.role)}</td><td>${escapeHTML(actor.identifier || "—")}</td>
-    </tr>`).join("");
+    </tr>`;
+    }).join("");
     empty.textContent = "Aún no hay acciones registradas.";
     empty.hidden = entries.length > 0;
   } catch (error) {
@@ -626,6 +634,10 @@ function bindUI() {
     runAction(button, () => mutate(`/requests/${encodeURIComponent(id)}`, "PATCH", { approve }, approve ? "Petición aprobada." : "Petición rechazada."));
   });
   $("#request-filter")?.addEventListener("change", renderRequests);
+  $("#audit-body")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-view-ticket]");
+    if (button) showLoanTicket(button.dataset.viewTicket);
+  });
 
   $(`#${reviewPrefix}add-review`).addEventListener("click", () => addReview());
   reviewControl("review-book-filter").addEventListener("change", renderReviews);

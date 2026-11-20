@@ -12,7 +12,7 @@ El catálogo inicial y la lista de expresiones prohibidas también están en `da
 
 La aplicación guarda el catálogo, reseñas, préstamos, peticiones e historial en `localStorage` del navegador. Los datos se comparten entre las páginas del mismo navegador, pero no se sincronizan entre equipos. Para restablecer los datos iniciales, borra el almacenamiento local de la biblioteca o abre la aplicación en un perfil de navegador nuevo.
 
-Al solicitar un préstamo, el estudiante puede elegir la devolución entre hoy y los próximos 14 días y pedir opcionalmente un ticket físico. El ticket, con identificador único, se genera al aprobar la petición y puede consultarse e imprimirse desde administración. El envío de comprobantes por correo requiere un backend y un proveedor de correo; esta versión local no envía emails.
+Al solicitar un préstamo, el estudiante puede elegir la devolución entre hoy y los próximos 14 días y pedir opcionalmente un ticket físico. El ticket, con identificador único, se genera al aprobar la petición y puede consultarse e imprimirse desde administración, tanto en los préstamos como en el historial de acciones. El envío de comprobantes por correo requiere un backend y un proveedor de correo; esta versión local no envía emails.
 
 Al registrar un préstamo desde administración también se puede generar e imprimir el ticket en ese momento. Los estudiantes solo pueden publicar o editar reseñas de libros para los que hayan enviado una solicitud de préstamo.
 
