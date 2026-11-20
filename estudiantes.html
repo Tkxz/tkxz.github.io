@@ -86,7 +86,13 @@
           <img src="assets/logo-ejmc.png" alt="Escuela José Miguel Carrera" />
           <h2>Panel de estudiante</h2>
         </div>
-        <div class="student-request-area"><div><h3>Mis préstamos y solicitudes</h3><p>Los préstamos quedan sujetos a la aprobación de biblioteca.</p></div><div class="table-scroll"><table><thead><tr><th>Libro</th><th>Tipo</th><th>Fecha</th><th>Devolución</th><th>Ticket</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="student-requests-body"></tbody></table></div><p class="module-empty" id="student-requests-empty">Aún no tienes solicitudes ni préstamos registrados.</p></div>
+        <div class="student-request-area">
+          <div><h3>Mis préstamos y solicitudes</h3><p>Los préstamos quedan sujetos a la aprobación de biblioteca.</p></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Mis préstamos y solicitudes">
+            <table><thead><tr><th>Libro</th><th>Tipo</th><th>Fecha</th><th>Devolución</th><th>Ticket</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="student-requests-body"></tbody></table>
+          </div>
+          <p class="module-empty" id="student-requests-empty">Aún no tienes solicitudes ni préstamos registrados.</p>
+        </div>
         <section class="student-review-area" aria-labelledby="student-reviews-title">
           <div class="panel-toolbar">
             <div><h3 id="student-reviews-title">Opiniones de la comunidad</h3><p>Comparte tu experiencia y consulta las reseñas de otros lectores.</p></div>

@@ -418,11 +418,13 @@ function renderStudentPanel() {
   const rows = [
     ...requests.map((item) => ({ item, when: item.createdAt, dueDate: item.dueDate, ticketId: item.ticketId, ticketRequested: item.ticketRequested, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
     ...loans.map((item) => ({ item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, label: "Préstamo", returnable: item.status !== "Devuelto" })),
-  ].sort((a, b) => b.when.localeCompare(a.when));
+  ];
+  const hasReturnAction = (item) => item.returnable
+    && !requests.some((request) => request.type === "return" && request.loanId === item.id && request.status === "Pendiente");
+  rows.sort((a, b) => Number(hasReturnAction(b.item)) - Number(hasReturnAction(a.item)) || b.when.localeCompare(a.when));
   $("#student-requests-body").innerHTML = rows.map(({ item, when, dueDate, ticketId, ticketRequested, label, returnable }) => {
     const book = data.books.find((entry) => entry.id === item.bookId);
-    const returnPending = requests.some((request) => request.type === "return" && request.loanId === item.id && request.status === "Pendiente");
-    const action = returnable && !returnPending ? `<button class="table-action" data-student-return="${escapeHTML(item.id)}" type="button">Solicitar devolución</button>` : "—";
+    const action = hasReturnAction(item) ? `<button class="table-action" data-student-return="${escapeHTML(item.id)}" type="button">Solicitar devolución</button>` : "—";
     const ticket = ticketId
       ? escapeHTML(ticketId)
       : ticketRequested ? (item.status === "Pendiente" ? "Al aprobar" : "No generado") : "Se genera al aprobar";
