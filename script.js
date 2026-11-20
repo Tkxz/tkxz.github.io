@@ -411,16 +411,20 @@ async function loadHistory() {
   try {
     const { entries } = await api("/audit");
     if (version !== renderVersion) return;
-    $("#audit-body").innerHTML = entries.map(({ at, action, target, actor }) => {
+    $("#audit-body").innerHTML = entries.map(({ at, action, target, actor, details }) => {
       const request = data.requests.find((item) => item.id === target.id);
       const ticketLoan = data.loans.find((loan) => loan.id === target.id)
         || (request?.ticketId && data.loans.find((loan) => loan.ticketId === request.ticketId));
       const ticket = ticketLoan?.ticketId
         ? `<button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">${escapeHTML(ticketLoan.ticketId)}</button>`
         : "—";
+      const studentName = action === "Eliminar reseña" ? details?.studentName || "—" : "—";
+      const deletedComment = action === "Eliminar reseña" && details?.comment
+        ? `<small>Comentario eliminado: ${escapeHTML(details.comment)}</small>`
+        : "";
       return `<tr>
       <td><time datetime="${escapeHTML(at)}">${dateTime.format(new Date(at))}</time></td>
-      <td>${escapeHTML(action)}</td><td>${escapeHTML(target.label)}<small>${escapeHTML(target.id)}</small></td><td>${ticket}</td>
+      <td>${escapeHTML(action)}</td><td>${escapeHTML(target.label)}${deletedComment}<small>${escapeHTML(target.id)}</small></td><td>${ticket}</td><td>${escapeHTML(studentName)}</td>
       <td>${escapeHTML(actor.name)}</td><td>${escapeHTML(roleNames[actor.role] || actor.role)}</td><td>${escapeHTML(actor.identifier || "—")}</td>
     </tr>`;
     }).join("");

@@ -126,13 +126,14 @@
     if (!roles.includes(actor.role)) failure(403, "forbidden", "No tienes permisos para realizar esta acción.");
   }
 
-  function auditEntry(state, actor, now, action, type, id, label, createId) {
+  function auditEntry(state, actor, now, action, type, id, label, createId, details) {
     state.audit.push({
       id: createId(),
       at: now.toISOString(),
       action,
       target: { id, type, label },
       actor: publicUser(actor),
+      ...(details ? { details } : {}),
     });
   }
 
@@ -402,7 +403,10 @@
           const title = state.books.find((book) => book.id === review.bookId)?.title ?? review.bookTitle;
           const label = title ? `Reseña de ${review.user} sobre «${title}»` : `Reseña de ${review.user}`;
           state.reviews = state.reviews.filter((record) => record.id !== id);
-          auditEntry(state, actor, now(), "Eliminar reseña", "reseña", id, label, createId);
+          auditEntry(state, actor, now(), "Eliminar reseña", "reseña", id, label, createId, {
+            studentName: review.user,
+            comment: review.comment,
+          });
         });
       }
       if (collection === "loans" && method === "POST" && !id) {
