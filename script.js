@@ -278,13 +278,6 @@ function showBookDetails(id) {
     dueDate.value = dueDate.max;
     dueDateField.append(dueDate);
 
-    const ticketField = document.createElement("label");
-    ticketField.className = "ticket-option";
-    const ticketRequested = document.createElement("input");
-    ticketRequested.type = "checkbox";
-    ticketRequested.name = "ticketRequested";
-    ticketField.append(ticketRequested, document.createTextNode("Quiero un ticket físico para pegar en el libro"));
-
     const errorRegion = document.createElement("p");
     errorRegion.className = "form-error";
     errorRegion.setAttribute("role", "alert");
@@ -295,7 +288,7 @@ function showBookDetails(id) {
     submit.type = "submit";
     submit.textContent = book.available > 0 ? "Solicitar préstamo" : "Sin ejemplares disponibles";
     submit.disabled = book.available < 1;
-    form.append(dueDateField, ticketField, errorRegion, submit);
+    form.append(dueDateField, errorRegion, submit);
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       runAction(submit, async () => {
@@ -303,7 +296,7 @@ function showBookDetails(id) {
           type: "loan",
           bookId: book.id,
           dueDate: dueDate.value,
-          ticketRequested: ticketRequested.checked,
+          ticketRequested: true,
         }, "Solicitud enviada. Espera la aprobación de biblioteca.");
         if (form.isConnected) $("#book-dialog").close();
       }, errorRegion);
@@ -406,7 +399,7 @@ function renderRequests() {
     const ticketLoan = request.ticketId ? data.loans.find((loan) => loan.ticketId === request.ticketId) : null;
     const ticket = ticketLoan
       ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">Ver</button></div>`
-      : request.ticketRequested ? `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>` : "—";
+      : `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>`;
     const action = request.status === "Pendiente" ? `<div class="row-actions"><button type="button" data-approve-request="${escapeHTML(request.id)}">Aprobar</button><button type="button" class="danger-action" data-reject-request="${escapeHTML(request.id)}">Rechazar</button></div>` : "—";
     return `<tr><td>${escapeHTML(request.student)}</td><td>${escapeHTML(book?.title || request.bookTitle || "Libro eliminado")}</td><td>${type}</td><td>${formatDate(request.createdAt)}</td><td>${formatDate(request.dueDate)}</td><td>${ticket}</td><td>${statusPill(request.status)}</td><td>${action}</td></tr>`;
   }).join("");
@@ -432,7 +425,7 @@ function renderStudentPanel() {
     const action = returnable && !returnPending ? `<button class="table-action" data-student-return="${escapeHTML(item.id)}" type="button">Solicitar devolución</button>` : "—";
     const ticket = ticketId
       ? escapeHTML(ticketId)
-      : ticketRequested ? (item.status === "Pendiente" ? "Al aprobar" : "No generado") : "—";
+      : ticketRequested ? (item.status === "Pendiente" ? "Al aprobar" : "No generado") : "Se genera al aprobar";
     return `<tr><td>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</td><td>${label}</td><td>${formatDate(when)}</td><td>${formatDate(dueDate)}</td><td>${ticket}</td><td>${statusPill(item.status)}</td><td>${action}</td></tr>`;
   }).join("");
   $("#student-requests-empty").hidden = rows.length > 0;
@@ -623,10 +616,9 @@ function addLoan() {
     { name: "bookId", label: "Libro", type: "select", options },
     { name: "loanDate", label: "Fecha de préstamo", type: "date", value: today },
     { name: "dueDate", label: "Fecha límite de devolución", type: "date", value: due },
-    { name: "ticketRequested", label: "Generar ticket de préstamo", type: "checkbox" },
   ], (values) => mutate("/loans", "POST", {
     ...values,
-    ticketRequested: Boolean(values.ticketRequested),
+    ticketRequested: true,
   }, "Préstamo registrado y stock actualizado."));
 }
 

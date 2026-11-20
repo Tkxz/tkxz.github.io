@@ -113,7 +113,7 @@
 
   function publicRequest(request) {
     const { id, type, student, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested, ticketId } = request;
-    return { id, type, student, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested: Boolean(ticketRequested), ticketId };
+    return { id, type, student, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested: type === "loan" ? true : Boolean(ticketRequested), ticketId };
   }
 
   function publicReview(review, actor) {
@@ -420,12 +420,9 @@
           const dueDate = dateField(body.dueDate);
           if (dueDate < loanDate) failure(400, "invalid_date_range", "La fecha límite debe ser igual o posterior al préstamo.");
           const user = textField(body.user, "El nombre del estudiante");
-          if (body.ticketRequested !== undefined && typeof body.ticketRequested !== "boolean") {
-            failure(400, "invalid_ticket_option", "Indica si necesitas un ticket físico.");
-          }
           const current = now();
           const today = schoolDate.format(current);
-          const ticketId = body.ticketRequested ? `JMC-${createId()}` : null;
+          const ticketId = `JMC-${createId()}`;
           const loan = issueLoan(state, book, { user, studentId: null, loanDate, dueDate, ticketId }, today, createId);
           auditEntry(state, actor, current, "Registrar préstamo", "préstamo", loan.id, book.title, createId);
           return publicLoan(loan, today);
@@ -456,10 +453,7 @@
             if (dueDate < today || dueDate > dueAfterTwoWeeks(today)) {
               failure(400, "invalid_due_date", "Elige una fecha de devolución entre hoy y los próximos 14 días.");
             }
-            if (body.ticketRequested !== undefined && typeof body.ticketRequested !== "boolean") {
-              failure(400, "invalid_ticket_option", "Indica si necesitas un ticket físico.");
-            }
-            ticketRequested = body.ticketRequested === true;
+            ticketRequested = true;
           } else {
             loan = findRecord(state.loans, body.loanId, "El préstamo");
             if (loan.studentId !== actor.id) failure(403, "forbidden", "Solo puedes solicitar la devolución de tus propios préstamos.");
@@ -490,7 +484,7 @@
             const book = availableBook(state, request.bookId);
             const dueDate = request.dueDate || dueAfterTwoWeeks(today);
             if (dueDate < today) failure(409, "request_due_date_expired", "La fecha elegida ya pasó. Rechaza esta petición para que el estudiante pueda enviar otra.");
-            const ticketId = request.ticketRequested ? `JMC-${createId()}` : null;
+            const ticketId = `JMC-${createId()}`;
             issueLoan(state, book, { user: request.student, studentId: request.studentId, loanDate: today, dueDate, ticketId }, today, createId);
             request.ticketId = ticketId;
           }
