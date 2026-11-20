@@ -123,13 +123,14 @@ function displayError(error, region) {
 }
 
 async function mutate(path, method, body, message) {
-  await api(path, method, body);
+  const result = await api(path, method, body);
   try {
     await refreshState();
   } catch (error) {
     displayError(error);
   }
   toast(message);
+  return result;
 }
 
 async function runAction(button, action, errorRegion) {
@@ -450,6 +451,8 @@ function openForm(title, fields, onSubmit) {
     if (field.type === "select") {
       input = `<select name="${name}" ${required}>${field.options.map(([key, label]) =>
         `<option value="${escapeHTML(key)}" ${String(value) === String(key) ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select>`;
+    } else if (field.type === "checkbox") {
+      input = `<input name="${name}" type="checkbox" value="true" ${field.checked ? "checked" : ""}>`;
     } else if (field.type === "textarea") {
       input = `<textarea name="${name}" maxlength="${field.maxlength || 1000}" ${required}>${escapeHTML(value)}</textarea>`;
     } else {
@@ -472,8 +475,9 @@ function openForm(title, fields, onSubmit) {
     submit.disabled = cancel.disabled = close.disabled = true;
     errorRegion.hidden = true;
     try {
-      await onSubmit(Object.fromEntries(new FormData(form)));
+      const result = await onSubmit(Object.fromEntries(new FormData(form)));
       dialog.close();
+      if (result?.ticketId) showLoanTicket(result.id);
     } catch (error) {
       displayError(error, errorRegion);
     } finally {
@@ -517,14 +521,26 @@ function addLoan() {
     { name: "bookId", label: "Libro", type: "select", options },
     { name: "loanDate", label: "Fecha de préstamo", type: "date", value: today },
     { name: "dueDate", label: "Fecha límite de devolución", type: "date", value: due },
-  ], (values) => mutate("/loans", "POST", values, "Préstamo registrado y stock actualizado."));
+    { name: "ticketRequested", label: "Generar ticket de préstamo", type: "checkbox" },
+  ], (values) => mutate("/loans", "POST", {
+    ...values,
+    ticketRequested: Boolean(values.ticketRequested),
+  }, "Préstamo registrado y stock actualizado."));
 }
 
 function addReview(review) {
-  const options = data.books.map((book) => [book.id, book.title]);
+  const eligibleBookIds = new Set([
+    ...data.requests.filter((request) => request.type === "loan").map((request) => request.bookId),
+    ...data.loans.map((loan) => loan.bookId),
+  ]);
+  const options = data.books
+    .filter((book) => data.user.role === "admin" || eligibleBookIds.has(book.id))
+    .map((book) => [book.id, book.title]);
   if (review && !data.books.some((book) => book.id === review.bookId)) options.unshift([review.bookId, review.bookTitle || "Libro eliminado"]);
   if (!options.length) {
-    toast("No hay libros disponibles para reseñar.", "error");
+    toast(data.user.role === "student"
+      ? "Primero debes solicitar un préstamo para poder reseñar un libro."
+      : "No hay libros disponibles para reseñar.", "error");
     return;
   }
   openForm(review ? "Editar reseña" : "Publicar reseña", [

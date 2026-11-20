@@ -14,6 +14,8 @@ La aplicación guarda el catálogo, reseñas, préstamos, peticiones e historial
 
 Al solicitar un préstamo, el estudiante puede elegir la devolución entre hoy y los próximos 14 días y pedir opcionalmente un ticket físico. El ticket, con identificador único, se genera al aprobar la petición y puede consultarse e imprimirse desde administración. El envío de comprobantes por correo requiere un backend y un proveedor de correo; esta versión local no envía emails.
 
+Al registrar un préstamo desde administración también se puede generar e imprimir el ticket en ese momento. Los estudiantes solo pueden publicar o editar reseñas de libros para los que hayan enviado una solicitud de préstamo.
+
 La lista de préstamos en administración muestra solo préstamos vigentes. Al registrar una devolución, el ejemplar vuelve al inventario y los contadores se actualizan; los préstamos devueltos se conservan en el historial del estudiante.
 
 Este modo es solo para desarrollo y pruebas: las páginas y los datos del navegador no están protegidos para producción. No uses información personal. La autenticación, el servidor y la base de datos se incorporarán más adelante.

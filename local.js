@@ -305,6 +305,11 @@
     function reviewFields(state, actor, input, previous) {
       const book = state.books.find((item) => item.id === input.bookId);
       if (!book && (!previous || input.bookId !== previous.bookId)) failure(404, "not_found", "El libro no existe.");
+      const requestedBook = state.loans.some((loan) => loan.studentId === actor.id && loan.bookId === input.bookId)
+        || state.requests.some((request) => request.type === "loan" && request.studentId === actor.id && request.bookId === input.bookId);
+      if (actor.role === "student" && !requestedBook) {
+        failure(403, "book_not_requested", "Solo puedes reseñar libros que hayas solicitado.");
+      }
       const comment = textField(input.comment, "El comentario", { min: 5, max: 600 });
       checkReview(comment, seed.prohibitedExpressions);
       if (state.reviews.some((review) => review.ownerId === actor.id && review.bookId === input.bookId && review.id !== previous?.id)) {
@@ -408,9 +413,15 @@
           const dueDate = dateField(body.dueDate);
           if (dueDate < loanDate) failure(400, "invalid_date_range", "La fecha límite debe ser igual o posterior al préstamo.");
           const user = textField(body.user, "El nombre del estudiante");
+          if (body.ticketRequested !== undefined && typeof body.ticketRequested !== "boolean") {
+            failure(400, "invalid_ticket_option", "Indica si necesitas un ticket físico.");
+          }
           const current = now();
-          const loan = issueLoan(state, book, { user, studentId: null, loanDate, dueDate }, schoolDate.format(current), createId);
+          const today = schoolDate.format(current);
+          const ticketId = body.ticketRequested ? `JMC-${createId()}` : null;
+          const loan = issueLoan(state, book, { user, studentId: null, loanDate, dueDate, ticketId }, today, createId);
           auditEntry(state, actor, current, "Registrar préstamo", "préstamo", loan.id, book.title, createId);
+          return publicLoan(loan, today);
         });
       }
       if (collection === "loans" && method === "POST" && id && suffix === "/return") {
