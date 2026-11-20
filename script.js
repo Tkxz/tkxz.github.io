@@ -10,11 +10,478 @@ const dateAfterDays = (date, days) => {
   result.setUTCDate(result.getUTCDate() + days);
   return result.toISOString().slice(0, 10);
 };
+const formatDateLabel = (value) => value
+  ? new Intl.DateTimeFormat("es-CL", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+    .format(new Date(`${value}T12:00:00Z`))
+  : "Seleccionar fecha";
+const dateAsISO = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const formatDate = (value) => {
   if (!value) return "—";
   if (value.length === 10) return new Date(`${value}T12:00:00`).toLocaleDateString("es-CL");
   return localDate.format(new Date(value)).split("-").reverse().join("-");
 };
+
+let activeDatePicker = null;
+let activeSelectPicker = null;
+let datePickerDismissalInstalled = false;
+let datePickerInstance = 0;
+const datePickerInstances = new WeakMap();
+const selectPickerInstances = new WeakMap();
+
+function closeDatePicker(returnFocus = false) {
+  if (!activeDatePicker) return;
+  const { control, popup, trigger } = activeDatePicker;
+  if (activeDatePicker.topLayerOpen) popup.hidePopover();
+  popup.hidden = true;
+  control.classList.remove("is-open");
+  trigger.setAttribute("aria-expanded", "false");
+  activeDatePicker = null;
+  if (returnFocus) trigger.focus();
+}
+
+function closeSelectPicker(returnFocus = false) {
+  if (!activeSelectPicker) return;
+  const { control, popup, trigger, topLayerOpen } = activeSelectPicker;
+  if (topLayerOpen) popup.hidePopover();
+  popup.hidden = true;
+  control.classList.remove("is-open");
+  trigger.setAttribute("aria-expanded", "false");
+  activeSelectPicker = null;
+  if (returnFocus) trigger.focus();
+}
+
+function installPickerDismissal() {
+  if (datePickerDismissalInstalled) return;
+  document.addEventListener("pointerdown", (event) => {
+    if (activeDatePicker && !activeDatePicker.control.contains(event.target)) closeDatePicker();
+    if (activeSelectPicker && !activeSelectPicker.control.contains(event.target)) closeSelectPicker();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (activeSelectPicker) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeSelectPicker(true);
+    } else if (activeDatePicker) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeDatePicker(true);
+    }
+  });
+  datePickerDismissalInstalled = true;
+}
+
+function renderDatePicker(state) {
+  const { input, popup, month } = state;
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstDay = new Date(year, monthIndex, 1);
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  const min = input.dataset.minDate || "";
+  const max = input.dataset.maxDate || "";
+  const monthLabel = new Intl.DateTimeFormat("es-CL", { month: "long", year: "numeric" }).format(firstDay);
+  const heading = popup.querySelector(".calendar-month");
+  heading.textContent = monthLabel.charAt(0).toLocaleUpperCase("es-CL") + monthLabel.slice(1);
+  popup.setAttribute("aria-labelledby", heading.id);
+  popup.querySelector(".calendar-grid").replaceChildren();
+
+  const previousMonth = new Date(year, monthIndex, 0);
+  const nextMonth = new Date(year, monthIndex + 1, 1);
+  popup.querySelector("[data-calendar-prev]").disabled = Boolean(min && dateAsISO(previousMonth) < min);
+  popup.querySelector("[data-calendar-next]").disabled = Boolean(max && dateAsISO(nextMonth) > max);
+
+  const grid = popup.querySelector(".calendar-grid");
+  const leadingDays = (firstDay.getDay() + 6) % 7;
+  for (let blank = 0; blank < leadingDays; blank += 1) {
+    const emptyCell = document.createElement("span");
+    emptyCell.className = "calendar-empty";
+    emptyCell.setAttribute("aria-hidden", "true");
+    grid.append(emptyCell);
+  }
+
+  const today = dateToday();
+  for (let day = 1; day <= lastDay.getDate(); day += 1) {
+    const date = new Date(year, monthIndex, day);
+    const value = dateAsISO(date);
+    const button = document.createElement("button");
+    button.className = "calendar-day";
+    button.type = "button";
+    button.textContent = String(day);
+    button.dataset.calendarDate = value;
+    button.setAttribute("aria-label", formatDateLabel(value));
+    button.setAttribute("aria-pressed", String(value === input.value));
+    button.disabled = Boolean((min && value < min) || (max && value > max));
+    if (value === today) button.classList.add("is-today");
+    if (value === input.value) button.classList.add("is-selected");
+    grid.append(button);
+  }
+
+  const trailingDays = (7 - (leadingDays + lastDay.getDate()) % 7) % 7;
+  for (let blank = 0; blank < trailingDays; blank += 1) {
+    const emptyCell = document.createElement("span");
+    emptyCell.className = "calendar-empty";
+    emptyCell.setAttribute("aria-hidden", "true");
+    grid.append(emptyCell);
+  }
+  const todayButton = popup.querySelector("[data-calendar-today]");
+  todayButton.disabled = Boolean((min && today < min) || (max && today > max));
+  todayButton.setAttribute("aria-label", `Elegir hoy, ${formatDateLabel(today)}`);
+  popup.querySelector(".calendar-caption").textContent = min || max
+    ? `Fechas disponibles${min ? ` desde ${formatDateLabel(min)}` : ""}${max ? ` hasta ${formatDateLabel(max)}` : ""}`
+    : "Selecciona una fecha";
+}
+
+function updateDatePickerBounds(input, min, max) {
+  input.dataset.minDate = min || "";
+  input.dataset.maxDate = max || "";
+  if (min && input.value < min) input.value = min;
+  if (max && input.value > max) input.value = max;
+  const picker = datePickerInstances.get(input);
+  if (!picker) return;
+  picker.updateTrigger();
+  if (activeDatePicker === picker.state && input.value) {
+    const [year, month] = input.value.split("-").map(Number);
+    picker.state.month = new Date(year, month - 1, 1);
+    renderDatePicker(picker.state);
+    positionDatePicker(picker.state);
+  }
+}
+
+function positionDatePicker(state) {
+  positionPickerPopover(state.control, state.trigger, state.popup);
+}
+
+function positionPickerPopover(control, trigger, popup) {
+  const controlRect = control.getBoundingClientRect();
+  const triggerRect = trigger.getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
+  const left = Math.max(12, Math.min(triggerRect.left, innerWidth - popupRect.width - 12));
+  const roomBelow = innerHeight - triggerRect.bottom;
+  const roomAbove = triggerRect.top;
+  const above = roomBelow < popupRect.height + 12 && roomAbove > popupRect.height + 12;
+  const preferredTop = above
+    ? triggerRect.top - popupRect.height - 8
+    : triggerRect.bottom + 8;
+  const top = Math.max(12, Math.min(preferredTop, innerHeight - popupRect.height - 12));
+  const topLayer = typeof popup.showPopover === "function";
+  popup.style.left = `${topLayer ? left : left - controlRect.left}px`;
+  popup.style.top = `${topLayer ? top : top - controlRect.top}px`;
+}
+
+function attachDatePicker(input) {
+  if (input.dataset.customCalendar === "true") return;
+  input.dataset.customCalendar = "true";
+  input.dataset.minDate = input.min;
+  input.dataset.maxDate = input.max;
+  input.required = false;
+  input.type = "hidden";
+
+  const control = document.createElement("span");
+  control.className = "date-picker-control";
+  input.parentNode.insertBefore(control, input);
+  control.append(input);
+
+  const trigger = document.createElement("button");
+  trigger.className = "date-picker-trigger";
+  trigger.type = "button";
+  trigger.setAttribute("aria-haspopup", "dialog");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.innerHTML = `<span class="date-picker-label"></span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="2.5"></rect><path d="M7.5 3.5v3M16.5 3.5v3M4 9.5h16"></path></svg>`;
+  control.append(trigger);
+
+  const popup = document.createElement("div");
+  popup.className = "calendar-popover";
+  popup.setAttribute("popover", "manual");
+  if (typeof popup.showPopover === "function") popup.classList.add("is-top-layer");
+  popup.hidden = true;
+  popup.setAttribute("role", "dialog");
+  popup.innerHTML = `<div class="calendar-header">
+      <button type="button" class="calendar-nav" data-calendar-prev aria-label="Mes anterior">‹</button>
+      <h3 class="calendar-month"></h3>
+      <button type="button" class="calendar-nav" data-calendar-next aria-label="Mes siguiente">›</button>
+    </div>
+    <div class="calendar-weekdays" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+    <div class="calendar-grid"></div>
+    <div class="calendar-footer"><span class="calendar-caption"></span><button type="button" data-calendar-today>Hoy</button></div>`;
+  popup.querySelector(".calendar-month").id = `calendar-month-${++datePickerInstance}`;
+  control.append(popup);
+
+  const updateTrigger = () => {
+    const label = formatDateLabel(input.value);
+    trigger.querySelector(".date-picker-label").textContent = label;
+    trigger.setAttribute("aria-label", `${input.closest("label")?.childNodes[0]?.textContent.trim() || "Fecha"}: ${label}`);
+  };
+  const getInitialMonth = () => {
+    const value = input.value || input.dataset.minDate || dateToday();
+    const [year, month] = value.split("-").map(Number);
+    return new Date(year, month - 1, 1);
+  };
+  const state = { input, control, trigger, popup, month: getInitialMonth(), topLayerOpen: false };
+  updateTrigger();
+  datePickerInstances.set(input, { state, updateTrigger });
+
+  trigger.addEventListener("click", () => {
+    if (activeDatePicker?.trigger === trigger) {
+      closeDatePicker();
+      return;
+    }
+    closeSelectPicker();
+    closeDatePicker();
+    activeDatePicker = state;
+    state.month = getInitialMonth();
+    renderDatePicker(state);
+    popup.hidden = false;
+    if (typeof popup.showPopover === "function") {
+      popup.showPopover();
+      state.topLayerOpen = true;
+    }
+    control.classList.add("is-open");
+    trigger.setAttribute("aria-expanded", "true");
+    positionDatePicker(state);
+    (popup.querySelector(`[data-calendar-date="${input.value}"]:not(:disabled)`)
+      || popup.querySelector(".calendar-day:not(:disabled)"))?.focus();
+  });
+
+  popup.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button || button.disabled) return;
+    if (button.hasAttribute("data-calendar-prev")) {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1);
+      renderDatePicker(state);
+      positionDatePicker(state);
+      popup.querySelector("[data-calendar-prev]").focus();
+    } else if (button.hasAttribute("data-calendar-next")) {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1);
+      renderDatePicker(state);
+      positionDatePicker(state);
+      popup.querySelector("[data-calendar-next]").focus();
+    } else {
+      input.value = button.dataset.calendarDate || dateToday();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      updateTrigger();
+      closeDatePicker(true);
+    }
+  });
+
+  installPickerDismissal();
+}
+
+function refreshCustomSelect(select) {
+  const instance = selectPickerInstances.get(select);
+  if (!instance) return;
+  if (instance.rating) {
+    instance.update();
+    return;
+  }
+  const selected = select.selectedOptions[0];
+  const label = selected?.textContent.trim() || "Seleccionar una opción";
+  instance.label.textContent = label;
+  instance.trigger.setAttribute("aria-label", `${instance.name}: ${label}`);
+  instance.trigger.disabled = select.disabled;
+}
+
+function attachRatingPicker(select) {
+  if (selectPickerInstances.has(select)) return;
+  select.required = false;
+  select.hidden = true;
+  select.tabIndex = -1;
+  select.setAttribute("aria-hidden", "true");
+
+  const control = document.createElement("span");
+  control.className = "rating-picker-control";
+  select.parentNode.insertBefore(control, select);
+  control.append(select);
+  const group = document.createElement("div");
+  group.className = "rating-picker";
+  group.setAttribute("role", "radiogroup");
+  group.setAttribute("aria-label", select.closest("label")?.childNodes[0]?.textContent.trim() || "Calificación");
+  const stars = document.createElement("div");
+  stars.className = "rating-stars";
+  const feedback = document.createElement("span");
+  feedback.className = "rating-feedback";
+  feedback.setAttribute("aria-live", "polite");
+  group.append(stars, feedback);
+  control.append(group);
+
+  const buttons = [...select.options].map((option) => {
+    const value = Number(option.value);
+    const button = document.createElement("button");
+    button.className = "rating-star";
+    button.type = "button";
+    button.setAttribute("role", "radio");
+    button.dataset.ratingValue = String(value);
+    button.setAttribute("aria-label", option.textContent.trim());
+    button.addEventListener("click", () => {
+      select.value = String(value);
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      updateRatingPicker(instance);
+    });
+    stars.append(button);
+    return button;
+  });
+  const instance = { select, group, buttons, feedback };
+  const updateRatingPicker = (preview = null) => {
+    const selected = Number(select.value);
+    const shown = preview ?? selected;
+    buttons.forEach((button) => {
+      const value = Number(button.dataset.ratingValue);
+      button.textContent = value <= shown ? "★" : "☆";
+      button.classList.toggle("is-lit", value <= shown);
+      button.setAttribute("aria-checked", String(value === selected));
+      button.tabIndex = value === selected ? 0 : -1;
+      button.disabled = select.disabled;
+    });
+    feedback.textContent = `${shown} ${shown === 1 ? "estrella" : "estrellas"}`;
+  };
+  group.addEventListener("pointerover", (event) => {
+    const button = event.target.closest("[data-rating-value]");
+    if (button) updateRatingPicker(Number(button.dataset.ratingValue));
+  });
+  group.addEventListener("pointerleave", () => updateRatingPicker());
+  group.addEventListener("focusin", (event) => {
+    const button = event.target.closest("[data-rating-value]");
+    if (button) updateRatingPicker(Number(button.dataset.ratingValue));
+  });
+  group.addEventListener("focusout", (event) => {
+    if (!group.contains(event.relatedTarget)) updateRatingPicker();
+  });
+  group.addEventListener("keydown", (event) => {
+    const current = Number(event.target.closest("[data-rating-value]")?.dataset.ratingValue);
+    if (!current) return;
+    const values = buttons.map((button) => Number(button.dataset.ratingValue));
+    const next = event.key === "ArrowRight" || event.key === "ArrowUp" ? Math.min(Math.max(...values), current + 1)
+      : event.key === "ArrowLeft" || event.key === "ArrowDown" ? Math.max(Math.min(...values), current - 1)
+      : event.key === "Home" ? Math.min(...values)
+      : event.key === "End" ? Math.max(...values)
+      : null;
+    if (next === null) return;
+    event.preventDefault();
+    const button = buttons.find((item) => Number(item.dataset.ratingValue) === next);
+    button?.click();
+    button?.focus();
+  });
+  selectPickerInstances.set(select, { rating: true, update: updateRatingPicker });
+  select.addEventListener("change", () => updateRatingPicker());
+  updateRatingPicker();
+}
+
+function attachCustomSelect(select) {
+  if (select.hasAttribute("data-rating-picker")) {
+    attachRatingPicker(select);
+    return;
+  }
+  if (selectPickerInstances.has(select)) return;
+  const name = select.getAttribute("aria-label")
+    || select.closest("label")?.childNodes[0]?.textContent.trim()
+    || "Seleccionar una opción";
+  select.required = false;
+  select.hidden = true;
+  select.tabIndex = -1;
+  select.setAttribute("aria-hidden", "true");
+
+  const control = document.createElement("span");
+  control.className = "custom-select-control";
+  select.parentNode.insertBefore(control, select);
+  control.append(select);
+
+  const trigger = document.createElement("button");
+  trigger.className = "custom-select-trigger";
+  trigger.type = "button";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.innerHTML = `<span class="custom-select-label"></span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5"></path></svg>`;
+  control.append(trigger);
+
+  const popup = document.createElement("div");
+  popup.className = "custom-select-popover";
+  popup.setAttribute("role", "listbox");
+  popup.setAttribute("aria-label", `${name}: opciones`);
+  popup.setAttribute("popover", "manual");
+  if (typeof popup.showPopover === "function") popup.classList.add("is-top-layer");
+  popup.hidden = true;
+  control.append(popup);
+
+  const instance = { select, control, trigger, popup, name, label: trigger.querySelector(".custom-select-label"), topLayerOpen: false };
+  selectPickerInstances.set(select, { ...instance, rating: false });
+  const refresh = () => refreshCustomSelect(select);
+  const renderOptions = () => {
+    popup.replaceChildren();
+    [...select.options].forEach((option) => {
+      const button = document.createElement("button");
+      button.className = "select-option";
+      button.type = "button";
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", String(option.selected));
+      button.disabled = option.disabled;
+      button.dataset.selectValue = option.value;
+      button.textContent = option.textContent.trim();
+      popup.append(button);
+    });
+  };
+  trigger.addEventListener("click", () => {
+    if (activeSelectPicker?.trigger === trigger) {
+      closeSelectPicker();
+      return;
+    }
+    closeDatePicker();
+    closeSelectPicker();
+    renderOptions();
+    popup.hidden = false;
+    if (typeof popup.showPopover === "function") {
+      popup.showPopover();
+      instance.topLayerOpen = true;
+    }
+    control.classList.add("is-open");
+    trigger.setAttribute("aria-expanded", "true");
+    activeSelectPicker = instance;
+    positionPickerPopover(control, trigger, popup);
+    const selected = popup.querySelector('[aria-selected="true"]:not(:disabled)')
+      || popup.querySelector(".select-option:not(:disabled)");
+    selected?.focus();
+    selected?.scrollIntoView({ block: "nearest" });
+  });
+  popup.addEventListener("click", (event) => {
+    const option = event.target.closest(".select-option");
+    if (!option || option.disabled) return;
+    select.value = option.dataset.selectValue;
+    closeSelectPicker(true);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  popup.addEventListener("keydown", (event) => {
+    const options = [...popup.querySelectorAll(".select-option:not(:disabled)")];
+    const current = options.indexOf(document.activeElement);
+    let next = null;
+    if (event.key === "ArrowDown") next = Math.min(options.length - 1, current + 1);
+    else if (event.key === "ArrowUp") next = Math.max(0, current - 1);
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = options.length - 1;
+    if (next !== null) {
+      event.preventDefault();
+      options[next]?.focus();
+      return;
+    }
+    if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      instance.searchTerm = `${instance.searchTerm || ""}${event.key}`.toLocaleLowerCase("es");
+      window.clearTimeout(instance.searchTimer);
+      instance.searchTimer = window.setTimeout(() => { instance.searchTerm = ""; }, 700);
+      const start = Math.max(0, current + 1);
+      const orderedOptions = [...options.slice(start), ...options.slice(0, start)];
+      const match = orderedOptions.find((option) => option.textContent.trim().toLocaleLowerCase("es").includes(instance.searchTerm));
+      if (match) {
+        event.preventDefault();
+        match.focus();
+      }
+    }
+  });
+  control.addEventListener("focusout", (event) => {
+    if (activeSelectPicker === instance && !control.contains(event.relatedTarget)) closeSelectPicker();
+  });
+  select.addEventListener("change", refresh);
+  selectPickerInstances.set(select, { ...instance, rating: false, refresh });
+  refresh();
+  installPickerDismissal();
+}
 
 let data = { user: null, books: [], reviews: [], requests: [], loans: [] };
 let auditEntries = [];
@@ -48,13 +515,17 @@ function showPageError(message = "") {
 function clearRenderedData() {
   renderVersion += 1;
   auditEntries = [];
+  closeDatePicker();
+  closeSelectPicker();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   if (sectionNavigationUpdate) {
     window.removeEventListener("scroll", sectionNavigationUpdate);
     window.removeEventListener("resize", sectionNavigationUpdate);
+    window.removeEventListener("hashchange", sectionNavigationUpdate);
+    window.removeEventListener("popstate", sectionNavigationUpdate);
     sectionNavigationUpdate = null;
   }
-  document.querySelectorAll("#management-form, #inventory-body, #loans-body, #requests-body, #audit-body, #student-requests-body, #management-stats, #student-summary, #book-grid, #review-list, #student-review-list, #student-name, #review-book-filter, #student-review-book-filter")
+  document.querySelectorAll("#management-form, #inventory-body, #loans-body, #requests-body, #audit-body, #student-requests-body, #management-stats, #student-summary, #book-grid, #review-list, #student-review-list, #student-name, #review-book-filter")
     .forEach((region) => region.replaceChildren());
   ["ticket-id", "ticket-student", "ticket-book", "ticket-loan-date", "ticket-due-date", "ticket-comment"].forEach((id) => {
     const field = $(`#${id}`);
@@ -183,6 +654,25 @@ function ratingSummary(bookId) {
   return { count: reviews.length, average: reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0 };
 }
 
+function renderBookReviews(bookId) {
+  const reviews = data.reviews
+    .filter((review) => review.bookId === bookId)
+    .sort((a, b) => b.rating - a.rating || (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))
+    .slice(0, 3);
+
+  $("#dialog-review-list").innerHTML = reviews.map((review) => `
+    <article class="dialog-review-card">
+      <div class="dialog-review-top">
+        <strong>${escapeHTML(review.user)}</strong>
+        <span class="review-stars" aria-label="${review.rating} de 5 estrellas">${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}</span>
+      </div>
+      <p>${escapeHTML(review.comment)}</p>
+      <small>${formatDate(review.updatedAt || review.createdAt)}${review.updatedAt ? " · Editada" : ""}</small>
+    </article>
+  `).join("");
+  $("#dialog-reviews-empty").hidden = reviews.length > 0;
+}
+
 function primaryCategory(category) {
   return String(category || "").split("/")[0].trim();
 }
@@ -260,6 +750,7 @@ function showBookDetails(id) {
   $("#dialog-description").textContent = book.description || "Sin descripción disponible.";
   const rating = ratingSummary(book.id);
   $("#dialog-meta").textContent = [book.pages, `${book.available} ejemplares disponibles`, rating.count ? `★ ${rating.average.toFixed(1)}/5 (${rating.count} reseñas)` : "Sin valoraciones"].filter(Boolean).join(" · ");
+  renderBookReviews(book.id);
   $(".availability-note").textContent = `Estado físico: ${book.condition || "No especificado"}. ISBN: ${book.isbn || "No registrado"}.`;
   $("#student-loan-form")?.remove();
   if (data.user?.role === "student") {
@@ -277,6 +768,7 @@ function showBookDetails(id) {
     dueDate.max = dateAfterDays(dateToday(), 14);
     dueDate.value = dueDate.max;
     dueDateField.append(dueDate);
+    attachDatePicker(dueDate);
 
     const errorRegion = document.createElement("p");
     errorRegion.className = "form-error";
@@ -303,7 +795,9 @@ function showBookDetails(id) {
     });
     $(".dialog-copy").append(form);
   }
-  $("#book-dialog").showModal();
+  const dialog = $("#book-dialog");
+  dialog.showModal();
+  dialog.scrollTop = 0;
 }
 
 function renderInventory() {
@@ -436,13 +930,16 @@ const reviewControl = (name) => $(`#${reviewPrefix}${name}`);
 
 function renderReviews() {
   const select = reviewControl("review-book-filter");
-  const previous = select.value;
   const bookNames = new Map(data.reviews.map((review) => [review.bookId, review.bookTitle || "Libro eliminado"]));
   data.books.forEach((book) => { bookNames.set(book.id, book.title); });
-  select.replaceChildren(new Option("Todos los libros", "all"), ...[...bookNames].map(([id, title]) => new Option(title, id)));
-  if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+  if (select) {
+    const previous = select.value;
+    select.replaceChildren(new Option("Todos los libros", "all"), ...[...bookNames].map(([id, title]) => new Option(title, id)));
+    if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+    refreshCustomSelect(select);
+  }
 
-  const bookFilter = select.value;
+  const bookFilter = select?.value || "all";
   const sort = reviewControl("review-sort").value;
   const reviews = data.reviews.filter((review) => bookFilter === "all" || review.bookId === bookFilter);
   reviews.sort((a, b) => {
@@ -450,7 +947,7 @@ function renderReviews() {
     return ratingOrder || b.createdAt.localeCompare(a.createdAt);
   });
   reviewControl("review-list").innerHTML = reviews.map((review) => {
-    const edit = review.own ? `<button type="button" data-edit-review="${escapeHTML(review.id)}">Editar</button>` : "";
+    const edit = review.own && data.user.role === "admin" ? `<button type="button" data-edit-review="${escapeHTML(review.id)}">Editar</button>` : "";
     const moderate = data.user.role === "admin" ? `<button type="button" class="danger-action" data-delete-review="${escapeHTML(review.id)}" aria-label="Eliminar reseña de ${escapeHTML(review.user)}">Eliminar</button>` : "";
     return `<article class="review-card">
       <div class="review-top"><div><strong>${escapeHTML(review.user)}</strong><small>${escapeHTML(bookNames.get(review.bookId))}</small></div>
@@ -543,8 +1040,8 @@ function openForm(title, fields, onSubmit) {
     const required = field.required === false ? "" : "required";
     const name = escapeHTML(field.name);
     let input;
-    if (field.type === "select") {
-      input = `<select name="${name}" ${required}>${field.options.map(([key, label]) =>
+    if (field.type === "select" || field.type === "rating") {
+      input = `<select name="${name}" ${field.type === "rating" ? "data-rating-picker" : ""} ${required}>${field.options.map(([key, label]) =>
         `<option value="${escapeHTML(key)}" ${String(value) === String(key) ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select>`;
     } else if (field.type === "checkbox") {
       input = `<input name="${name}" type="checkbox" value="true" ${field.checked ? "checked" : ""}>`;
@@ -558,6 +1055,16 @@ function openForm(title, fields, onSubmit) {
     return `<label class="form-field">${escapeHTML(field.label)}${input}</label>`;
   }).join("") + `<p class="form-error" id="management-form-error" role="alert" hidden></p>
     <div class="form-actions"><button class="secondary-button" type="button" id="cancel-management">Cancelar</button><button class="action-button" type="submit">Guardar</button></div>`;
+  form.querySelectorAll('input[type="date"]').forEach(attachDatePicker);
+  form.querySelectorAll("select").forEach(attachCustomSelect);
+  const loanDateInput = form.querySelector('[name="loanDate"]');
+  const dueDateInput = form.querySelector('[name="dueDate"]');
+  if (loanDateInput && dueDateInput) {
+    loanDateInput.addEventListener("change", () => {
+      updateDatePickerBounds(loanDateInput, "", dateToday());
+      updateDatePickerBounds(dueDateInput, loanDateInput.value, dateAfterDays(loanDateInput.value, 14));
+    });
+  }
 
   $("#cancel-management").addEventListener("click", () => dialog.close());
   form.onsubmit = async (event) => {
@@ -614,8 +1121,8 @@ function addLoan() {
   openForm("Registrar préstamo", [
     { name: "user", label: "Nombre del estudiante", maxlength: 100 },
     { name: "bookId", label: "Libro", type: "select", options },
-    { name: "loanDate", label: "Fecha de préstamo", type: "date", value: today },
-    { name: "dueDate", label: "Fecha límite de devolución", type: "date", value: due },
+    { name: "loanDate", label: "Fecha de préstamo", type: "date", value: today, max: today },
+    { name: "dueDate", label: "Fecha límite de devolución (máximo 14 días)", type: "date", value: due, min: today, max: due },
   ], (values) => mutate("/loans", "POST", {
     ...values,
     ticketRequested: true,
@@ -639,7 +1146,7 @@ function addReview(review) {
   }
   openForm(review ? "Editar reseña" : "Publicar reseña", [
     { name: "bookId", label: "Libro", type: "select", value: review?.bookId || options[0][0], options },
-    { name: "rating", label: "Calificación", type: "select", value: review?.rating || 5, options: [[1, "1 estrella"], [2, "2 estrellas"], [3, "3 estrellas"], [4, "4 estrellas"], [5, "5 estrellas"]] },
+    { name: "rating", label: "Calificación", type: "rating", value: review?.rating || 5, options: [[1, "1 estrella"], [2, "2 estrellas"], [3, "3 estrellas"], [4, "4 estrellas"], [5, "5 estrellas"]] },
     { name: "comment", label: "Comentario", type: "textarea", value: review?.comment, maxlength: 600 },
   ], (values) => {
     const path = review ? `/reviews/${encodeURIComponent(review.id)}` : "/reviews";
@@ -648,6 +1155,7 @@ function addReview(review) {
 }
 
 function bindUI() {
+  document.querySelectorAll("select").forEach(attachCustomSelect);
   document.querySelectorAll(".filter-chip").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.classList.contains("selected")));
   });
@@ -734,13 +1242,17 @@ function bindUI() {
   });
 
   $(`#${reviewPrefix}add-review`).addEventListener("click", () => addReview());
-  reviewControl("review-book-filter").addEventListener("change", renderReviews);
+  const bookFilter = reviewControl("review-book-filter");
+  bookFilter?.addEventListener("change", renderReviews);
   reviewControl("review-sort").addEventListener("change", renderReviews);
   reviewControl("review-reset").addEventListener("click", () => {
-    reviewControl("review-book-filter").value = "all";
-    reviewControl("review-sort").value = "newest";
+    if (bookFilter) bookFilter.value = "all";
+    const sort = reviewControl("review-sort");
+    sort.value = "newest";
+    if (bookFilter) refreshCustomSelect(bookFilter);
+    refreshCustomSelect(sort);
     renderReviews();
-    reviewControl("review-book-filter").focus();
+    selectPickerInstances.get(bookFilter || sort)?.trigger.focus();
   });
   reviewControl("review-list").addEventListener("click", (event) => {
     const edit = event.target.closest("[data-edit-review]");
@@ -764,9 +1276,10 @@ function setupSectionNavigation() {
   if (sectionNavigationUpdate) {
     window.removeEventListener("scroll", sectionNavigationUpdate);
     window.removeEventListener("resize", sectionNavigationUpdate);
+    window.removeEventListener("hashchange", sectionNavigationUpdate);
+    window.removeEventListener("popstate", sectionNavigationUpdate);
   }
   const links = [...document.querySelectorAll(".main-nav .nav-link[href^='#']:not([hidden])")];
-  const sections = links.map((link) => $(link.getAttribute("href"))).filter((section) => section && !section.hidden);
 
   const setActive = (id) => {
     links.forEach((link) => {
@@ -777,6 +1290,34 @@ function setupSectionNavigation() {
     });
   };
 
+  const libraryPage = $("#biblioteca");
+  const studentPanelPage = $("#panel-estudiante");
+  if (pageRole === "student" && libraryPage && studentPanelPage) {
+    const pages = [libraryPage, studentPanelPage];
+    const pageLinks = [...document.querySelectorAll("a[data-student-page]")];
+    const activateStudentPage = () => {
+      const currentPage = pages.find((page) => page.id === location.hash.slice(1)) || libraryPage;
+      pages.forEach((page) => { page.hidden = page !== currentPage; });
+      setActive(currentPage.id);
+      if (location.hash !== `#${currentPage.id}`) history.replaceState(null, "", `#${currentPage.id}`);
+      window.scrollTo(0, 0);
+    };
+
+    pageLinks.forEach((link) => {
+      link.onclick = (event) => {
+        event.preventDefault();
+        if (location.hash === link.hash) activateStudentPage();
+        else location.hash = link.hash;
+      };
+    });
+    sectionNavigationUpdate = activateStudentPage;
+    window.addEventListener("hashchange", sectionNavigationUpdate);
+    window.addEventListener("popstate", sectionNavigationUpdate);
+    activateStudentPage();
+    return;
+  }
+
+  const sections = links.map((link) => $(link.getAttribute("href"))).filter((section) => section && !section.hidden);
   links.forEach((link) => {
     link.onclick = () => setActive(link.hash.slice(1));
   });
@@ -818,6 +1359,5 @@ function setupPage() {
   });
 }
 
-$("#current-year").textContent = new Date().getFullYear();
 bindUI();
 setupPage();

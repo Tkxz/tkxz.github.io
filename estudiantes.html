@@ -9,14 +9,14 @@
     />
     <meta name="theme-color" content="#f7f6f0" />
     <title>Estudiantes | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=student-table-scroll-2" />
+    <link rel="stylesheet" href="styles.css?v=header-footer-1" />
     <script src="data.js" defer></script>
-    <script src="local.js?v=admin-returns-1" defer></script>
-    <script src="script.js?v=student-admin-actions-1" defer></script>
+    <script src="local.js?v=admin-date-limits-1" defer></script>
+    <script src="script.js?v=student-subpages-1" defer></script>
   </head>
   <body data-role="student">
     <header class="site-header">
-      <a class="brand" href="#student-dashboard" aria-label="Biblioteca Escolar, ir al inicio">
+      <a class="brand" href="#biblioteca" data-student-page aria-label="Biblioteca Escolar, ir a la biblioteca">
         <span class="brand-mark" aria-hidden="true">
           <img src="assets/logo-ejmc.png" alt="" />
         </span>
@@ -30,12 +30,12 @@
         <span></span><span></span>
       </button>
       <nav class="main-nav" id="main-nav" aria-label="Navegación principal">
-        <a class="nav-link active" href="#student-dashboard">Inicio</a>
-        <a class="nav-link" href="#catalogo">Catálogo</a>
-        <a class="nav-link" href="#mis-prestamos">Mi panel</a>
+        <a class="nav-link active" href="#biblioteca" data-student-page>Biblioteca</a>
+        <a class="nav-link" href="#panel-estudiante" data-student-page>Panel de estudiante</a>
       </nav>
     </header>
     <main id="app-main" hidden>
+      <section class="student-subpage" id="biblioteca" aria-label="Biblioteca" hidden>
       <section class="student-dashboard section-wrap" id="student-dashboard" hidden>
         <div class="section-heading">
           <div>
@@ -77,13 +77,14 @@
         <p class="empty-state" id="empty-state" hidden>No encontramos libros con esa búsqueda. Prueba con otro título o categoría.</p>
         <div class="catalog-footer">
           <span id="results-count">Mostrando recomendaciones</span>
-          <a class="text-link" href="#mis-prestamos">Consulta mis préstamos <span aria-hidden="true">→</span></a>
+          <a class="text-link" href="#panel-estudiante" data-student-page>Ir a mi panel <span aria-hidden="true">→</span></a>
         </div>
       </section>
+      </section>
 
+      <section class="student-subpage" id="panel-estudiante" aria-label="Panel de estudiante" hidden>
       <section class="student-details section-wrap" id="mis-prestamos">
         <div class="student-details-heading">
-          <img src="assets/logo-ejmc.png" alt="Escuela José Miguel Carrera" />
           <h2>Panel de estudiante</h2>
         </div>
         <div class="student-request-area">
@@ -104,31 +105,15 @@
               <option value="highest">Mejor valoradas</option>
               <option value="lowest">Menor valoración</option>
             </select>
-            <select id="student-review-book-filter" aria-label="Filtrar reseñas por libro">
-              <option value="all">Todos los libros</option>
-            </select>
             <button class="secondary-button" id="student-review-reset" type="button">Restablecer filtros</button>
           </div>
           <div class="review-list" id="student-review-list"></div>
           <p class="module-empty" id="student-reviews-empty" role="status" hidden>Aún no hay reseñas publicadas.</p>
         </section>
       </section>
+      </section>
 
     </main>
-
-    <footer class="site-footer">
-      <a class="brand footer-brand" href="#student-dashboard">
-        <span class="brand-mark" aria-hidden="true">
-          <img src="assets/logo-ejmc.png" alt="" />
-        </span>
-        <span class="brand-copy">
-          <strong>Biblioteca Escolar</strong>
-          <small>Escuela José Miguel Carrera</small>
-        </span>
-      </a>
-      <p>Un libro, una idea, un mundo por descubrir.</p>
-      <span class="footer-year">© <span id="current-year"></span> Escuela José Miguel Carrera</span>
-    </footer>
 
     <dialog class="book-dialog" id="book-dialog" aria-labelledby="dialog-title">
       <button class="dialog-close" type="button" aria-label="Cerrar">×</button>
@@ -141,6 +126,17 @@
         <div class="dialog-meta" id="dialog-meta"></div>
         <p class="availability-note">Consulta la disponibilidad en la biblioteca de tu escuela.</p>
       </div>
+      <section class="dialog-reviews" aria-labelledby="dialog-reviews-title">
+        <div class="dialog-reviews-heading">
+          <div>
+            <span class="book-category">Opiniones</span>
+            <h3 id="dialog-reviews-title">Reseñas mejor valoradas</h3>
+          </div>
+          <p>Hasta 3 reseñas</p>
+        </div>
+        <div class="dialog-review-list" id="dialog-review-list"></div>
+        <p class="dialog-reviews-empty" id="dialog-reviews-empty" role="status" hidden>Este libro todavía no tiene reseñas.</p>
+      </section>
     </dialog>
     <dialog class="management-dialog" id="management-dialog" aria-labelledby="management-dialog-title">
       <button class="dialog-close" id="management-dialog-close" type="button" aria-label="Cerrar">×</button>

@@ -416,12 +416,15 @@
         requireRole(actor, "admin");
         return update((state) => {
           const book = availableBook(state, body.bookId);
-          const loanDate = dateField(body.loanDate);
-          const dueDate = dateField(body.dueDate);
-          if (dueDate < loanDate) failure(400, "invalid_date_range", "La fecha límite debe ser igual o posterior al préstamo.");
-          const user = textField(body.user, "El nombre del estudiante");
           const current = now();
           const today = schoolDate.format(current);
+          const loanDate = dateField(body.loanDate);
+          const dueDate = dateField(body.dueDate);
+          if (loanDate > today) failure(400, "invalid_date_range", "La fecha de préstamo no puede ser futura.");
+          if (dueDate < loanDate || dueDate > dueAfterTwoWeeks(loanDate)) {
+            failure(400, "invalid_date_range", "La devolución debe quedar entre la fecha del préstamo y los próximos 14 días.");
+          }
+          const user = textField(body.user, "El nombre del estudiante");
           const ticketId = `JMC-${createId()}`;
           const loan = issueLoan(state, book, { user, studentId: null, loanDate, dueDate, ticketId }, today, createId);
           auditEntry(state, actor, current, "Registrar préstamo", "préstamo", loan.id, book.title, createId);
