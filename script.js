@@ -399,7 +399,7 @@ function renderRequests() {
     const ticketLoan = request.ticketId ? data.loans.find((loan) => loan.ticketId === request.ticketId) : null;
     const ticket = ticketLoan
       ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">Ver</button></div>`
-      : `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>`;
+      : request.type === "loan" ? `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>` : "—";
     const action = request.status === "Pendiente" ? `<div class="row-actions"><button type="button" data-approve-request="${escapeHTML(request.id)}">Aprobar</button><button type="button" class="danger-action" data-reject-request="${escapeHTML(request.id)}">Rechazar</button></div>` : "—";
     return `<tr><td>${escapeHTML(request.student)}</td><td>${escapeHTML(book?.title || request.bookTitle || "Libro eliminado")}</td><td>${type}</td><td>${formatDate(request.createdAt)}</td><td>${formatDate(request.dueDate)}</td><td>${ticket}</td><td>${statusPill(request.status)}</td><td>${action}</td></tr>`;
   }).join("");
@@ -417,18 +417,16 @@ function renderStudentPanel() {
 
   const rows = [
     ...requests.map((item) => ({ item, when: item.createdAt, dueDate: item.dueDate, ticketId: item.ticketId, ticketRequested: item.ticketRequested, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
-    ...loans.map((item) => ({ item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, label: "Préstamo", returnable: item.status !== "Devuelto" })),
+    ...loans.map((item) => ({ item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, label: "Préstamo" })),
   ];
-  const hasReturnAction = (item) => Boolean(item.returnable)
-    && !requests.some((request) => request.type === "return" && request.loanId === item.id && request.status === "Pendiente");
-  rows.sort((a, b) => Number(hasReturnAction(b.item)) - Number(hasReturnAction(a.item)) || b.when.localeCompare(a.when));
-  $("#student-requests-body").innerHTML = rows.map(({ item, when, dueDate, ticketId, ticketRequested, label, returnable }) => {
+  rows.sort((a, b) => b.when.localeCompare(a.when));
+  $("#student-requests-body").innerHTML = rows.map(({ item, when, dueDate, ticketId, ticketRequested, label }) => {
     const book = data.books.find((entry) => entry.id === item.bookId);
-    const action = hasReturnAction(item) ? `<button class="table-action" data-student-return="${escapeHTML(item.id)}" type="button">Solicitar devolución</button>` : "—";
     const ticket = ticketId
       ? escapeHTML(ticketId)
+      : item.type === "return" ? "—"
       : ticketRequested ? (item.status === "Pendiente" ? "Al aprobar" : "No generado") : "Se genera al aprobar";
-    return `<tr><td>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</td><td>${label}</td><td>${formatDate(when)}</td><td>${formatDate(dueDate)}</td><td>${ticket}</td><td>${statusPill(item.status)}</td><td>${action}</td></tr>`;
+    return `<tr><td>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</td><td>${label}</td><td>${formatDate(when)}</td><td>${formatDate(dueDate)}</td><td>${ticket}</td><td>${statusPill(item.status)}</td></tr>`;
   }).join("");
   $("#student-requests-empty").hidden = rows.length > 0;
 }
@@ -712,10 +710,6 @@ function bindUI() {
   $("#loan-search")?.addEventListener("input", renderLoans);
   $("#loan-filter")?.addEventListener("change", renderLoans);
 
-  $("#student-requests-body")?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-student-return]");
-    if (button) runAction(button, () => mutate("/requests", "POST", { type: "return", loanId: button.dataset.studentReturn }, "Petición de devolución enviada."));
-  });
   $("#requests-body")?.addEventListener("click", (event) => {
     const ticketButton = event.target.closest("[data-view-ticket]");
     if (ticketButton) {

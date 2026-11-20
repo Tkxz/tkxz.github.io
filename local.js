@@ -441,33 +441,22 @@
         requireRole(actor, "student");
         return update((state) => {
           if (body.type !== "loan" && body.type !== "return") failure(400, "invalid_request_type", "Selecciona un tipo de solicitud válido.");
-          let book;
-          let loan;
-          let dueDate;
-          let ticketRequested = false;
+          if (body.type === "return") failure(403, "admin_only_return", "Las devoluciones deben ser registradas por administración.");
+          const book = availableBook(state, body.bookId);
+          const dueDate = dateField(body.dueDate);
+          const ticketRequested = true;
           const current = now();
           const today = schoolDate.format(current);
-          if (body.type === "loan") {
-            book = availableBook(state, body.bookId);
-            dueDate = dateField(body.dueDate);
-            if (dueDate < today || dueDate > dueAfterTwoWeeks(today)) {
-              failure(400, "invalid_due_date", "Elige una fecha de devolución entre hoy y los próximos 14 días.");
-            }
-            ticketRequested = true;
-          } else {
-            loan = findRecord(state.loans, body.loanId, "El préstamo");
-            if (loan.studentId !== actor.id) failure(403, "forbidden", "Solo puedes solicitar la devolución de tus propios préstamos.");
-            if (isReturned(loan)) failure(409, "already_returned", "Este préstamo ya fue devuelto.");
-            book = findRecord(state.books, loan.bookId, "El libro");
+          if (dueDate < today || dueDate > dueAfterTwoWeeks(today)) {
+            failure(400, "invalid_due_date", "Elige una fecha de devolución entre hoy y los próximos 14 días.");
           }
-          const duplicate = state.requests.some((request) => {
-            if (request.status !== "Pendiente" || request.type !== body.type || request.studentId !== actor.id) return false;
-            return loan ? request.loanId === loan.id : request.bookId === book.id;
-          });
+          const duplicate = state.requests.some((request) =>
+            request.status === "Pendiente" && request.type === body.type
+            && request.studentId === actor.id && request.bookId === book.id);
           if (duplicate) failure(409, "duplicate_request", "Ya tienes una petición pendiente para este movimiento.");
           state.requests.push({
             id: createId(), type: body.type, studentId: actor.id, student: actor.name,
-            bookId: book.id, bookTitle: book.title, loanId: loan?.id, dueDate, ticketRequested, ticketId: null,
+            bookId: book.id, bookTitle: book.title, dueDate, ticketRequested, ticketId: null,
             status: "Pendiente", createdAt: today,
           });
         });
