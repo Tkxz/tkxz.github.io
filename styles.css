@@ -214,6 +214,7 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .ticket-print-button { width: 100%; margin-top: 16px; }
 @media print {
   body * { visibility: hidden !important; }
+  body > :not(#ticket-dialog) { display: none !important; }
   #ticket-dialog[open], #ticket-dialog[open] * { visibility: visible !important; }
   #ticket-dialog[open] { position: absolute; inset: 0 auto auto 0; width: 80mm; max-width: 80mm; margin: 0; border: 0; padding: 0; box-shadow: none; }
   #ticket-dialog .dialog-close, #ticket-dialog .ticket-print-button { display: none !important; }
