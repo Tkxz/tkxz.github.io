@@ -534,6 +534,7 @@ function clearRenderedData() {
   }
   document.querySelectorAll("#management-form, #inventory-body, #loans-body, #requests-body, #audit-body, #student-requests-body, #management-stats, #student-summary, #book-grid, #review-list, #student-review-list, #student-name, #review-book-filter")
     .forEach((region) => region.replaceChildren());
+  if ($("#student-read-books")) $("#student-read-books").hidden = true;
   ["ticket-id", "ticket-student", "ticket-book", "ticket-loan-date", "ticket-due-date", "ticket-returned-at", "ticket-return-status", "ticket-comment"].forEach((id) => {
     const field = $(`#${id}`);
     if (field) field.textContent = "";
@@ -749,6 +750,7 @@ function renderCatalog(resetScroll = false) {
   const grid = $("#book-grid");
   const query = $("#book-search").value.trim().toLocaleLowerCase("es");
   const selected = $(".filter-chip.selected")?.dataset.category || "Todos";
+  const readBookIds = new Set(getReadBooks().map((book) => book.id));
   const visible = data.books.filter((book) =>
     (selected === "Todos" || catalogFilterCategory(book) === selected)
     && `${book.title} ${book.author} ${book.category} ${book.isbn}`.toLocaleLowerCase("es").includes(query)
@@ -756,7 +758,7 @@ function renderCatalog(resetScroll = false) {
   grid.innerHTML = visible.map((book) => {
     const rating = ratingSummary(book.id);
     return `<article class="book-card">
-      <div class="book-card-top"><span class="book-category">${escapeHTML(book.category)}</span></div>
+      <div class="book-card-top"><span class="book-category">${escapeHTML(book.category)}</span>${readBookIds.has(book.id) ? '<span class="read-badge">Leído</span>' : ""}</div>
       <button class="book-cover cover-art ${escapeHTML(book.cover || "cover-1")}" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver detalles de ${escapeHTML(book.title)}"><span class="cover-title">${escapeHTML(book.title)}</span><span class="cover-author">${escapeHTML(book.author)}</span></button>
       <div class="book-info"><div><h3>${escapeHTML(book.title)}</h3><p>${escapeHTML(book.author)} · ${book.available} disponibles</p><p class="catalog-rating">${rating.count ? `★ ${rating.average.toFixed(1)} (${rating.count} reseñas)` : "Sin valoraciones"}</p></div>
       <button class="book-arrow" type="button" data-book="${escapeHTML(book.id)}" aria-label="Más información de ${escapeHTML(book.title)}">↗</button></div></article>`;
@@ -978,11 +980,23 @@ function renderRequests() {
 
 function renderStudentPanel() {
   const { loans, requests } = data;
+  const readBooks = getReadBooks();
   $("#student-summary").innerHTML = [
     ["Préstamos activos", loans.filter((loan) => loan.status !== "Devuelto").length, "Libros en tu poder"],
     ["Peticiones pendientes", requests.filter((request) => request.status === "Pendiente").length, "En revisión"],
     ["Historial", loans.length, "Préstamos registrados"],
-  ].map(([label, count, note]) => `<article class="stat-card"><span>${label}</span><strong>${count}</strong><small>${note}</small></article>`).join("");
+  ].map(([label, count, note]) => `<article class="stat-card"><span>${label}</span><strong>${count}</strong><small>${note}</small></article>`).join("")
+    + `<button class="stat-card stat-card-button" id="student-read-books-toggle" type="button" aria-controls="student-read-books" aria-expanded="false"><span>Libros leídos</span><strong>${readBooks.length}</strong><small>Ver y volver a pedir</small></button>`;
+
+  $("#student-read-list").innerHTML = readBooks.map((book) => `
+    <article class="student-read-card">
+      <div><span class="read-badge">Leído</span><h4>${escapeHTML(book.title)}</h4><p>${escapeHTML(book.author || "Autor no disponible")}</p></div>
+      ${book.available === null
+        ? '<small>Ya no está en el catálogo</small>'
+        : `<button class="secondary-button" type="button" data-rerequest-book="${escapeHTML(book.id)}"${book.available < 1 ? " disabled" : ""}>${book.available > 0 ? "Volver a pedir" : "Sin ejemplares disponibles"}</button>`}
+    </article>
+  `).join("");
+  $("#student-read-books-empty").hidden = readBooks.length > 0;
 
   const rows = [
     ...requests.map((item) => ({ item, when: item.createdAt, dueDate: item.dueDate, ticketId: item.ticketId, ticketRequested: item.ticketRequested, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
@@ -1007,9 +1021,28 @@ function renderStudentPanel() {
       : "";
     const ticket = returnTicket ? `${item.type === "return" ? "" : `<small>Préstamo: ${loanTicket}</small>`}${returnTicket}`
       : loanTicket;
-    return `<tr><td>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</td><td>${label}</td><td>${formatDate(item.createdAt || item.loanDate)}</td><td>${formatDate(dueDate)}${returnDate}</td><td>${ticket}</td><td>${statusPill(item.status)}</td></tr>`;
+    const readBadge = item.type !== "return" && item.status === "Devuelto" ? '<span class="read-badge">Leído</span>' : "";
+    return `<tr><td><strong>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</strong>${readBadge}</td><td>${label}</td><td>${formatDate(item.createdAt || item.loanDate)}</td><td>${formatDate(dueDate)}${returnDate}</td><td>${ticket}</td><td>${statusPill(item.status)}</td></tr>`;
   }).join("");
   $("#student-requests-empty").hidden = rows.length > 0;
+}
+
+function getReadBooks() {
+  const returnedLoans = data.loans
+    .filter((loan) => loan.status === "Devuelto")
+    .sort((a, b) => (b.returnedAt || b.loanDate).localeCompare(a.returnedAt || a.loanDate));
+  const booksById = new Map();
+  returnedLoans.forEach((loan) => {
+    if (booksById.has(loan.bookId)) return;
+    const book = data.books.find((item) => item.id === loan.bookId);
+    booksById.set(loan.bookId, {
+      id: loan.bookId,
+      title: book?.title || loan.bookTitle || "Libro eliminado",
+      author: book?.author || "",
+      available: book ? book.available : null,
+    });
+  });
+  return [...booksById.values()];
 }
 
 const reviewPrefix = pageRole === "student" ? "student-" : "";
@@ -1383,6 +1416,17 @@ function bindUI() {
   $("#student-requests-body")?.addEventListener("click", (event) => {
     const returnTicketButton = event.target.closest("[data-view-return-ticket]");
     if (returnTicketButton) showReturnTicket(returnTicketButton.dataset.viewReturnTicket);
+  });
+  $("#student-summary")?.addEventListener("click", (event) => {
+    const button = event.target.closest("#student-read-books-toggle");
+    if (!button) return;
+    const section = $("#student-read-books");
+    section.hidden = !section.hidden;
+    button.setAttribute("aria-expanded", String(!section.hidden));
+  });
+  $("#student-read-list")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-rerequest-book]");
+    if (button) showBookDetails(button.dataset.rerequestBook);
   });
   $("#request-filter")?.addEventListener("change", renderRequests);
   $("#audit-body")?.addEventListener("click", (event) => {

@@ -424,7 +424,18 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .student-details { scroll-margin-top: 88px; }
 .student-toolbar { margin: 25px 0; }
 .student-toolbar strong { margin-left: 5px; }
-.student-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 22px 0 35px; }
+.student-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin: 22px 0 35px; }
+.stat-card-button { width: 100%; text-align: left; font: inherit; cursor: pointer; }
+.stat-card-button:hover, .stat-card-button:focus-visible { border-color: #b7c5b7; outline-color: var(--green); }
+.student-read-books { display: grid; gap: 15px; margin: -12px 0 34px; padding: 22px; border: 1px solid var(--line); background: var(--white); }
+.student-read-books h3 { margin: 0 0 5px; font: 600 21px var(--serif); }
+.student-read-books > div:first-child p { margin: 0; color: #8a9088; font-size: 10px; }
+.student-read-list { display: grid; gap: 10px; }
+.student-read-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px; border: 1px solid var(--line); }
+.student-read-card h4 { margin: 6px 0 0; color: var(--ink); font: 600 16px var(--serif); }
+.student-read-card p { margin: 2px 0 0; color: #8a9088; font-size: 12px; }
+.read-badge { display: inline-flex; align-items: center; border-radius: 20px; padding: 3px 8px; background: #edf1e9; color: var(--green); font-size: 9px; font-weight: 700; white-space: nowrap; }
+.book-card-top .read-badge { letter-spacing: 0; text-transform: none; }
 .student-request-area { display: grid; gap: 15px; }
 .student-request-area .table-scroll { max-height: min(45vh, 360px); overflow: auto; }
 .student-request-area .table-scroll th { position: sticky; top: 0; z-index: 1; }
@@ -445,6 +456,7 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 @media (max-width: 680px) {
   .catalog-scroll { max-block-size: 56dvh; }
   .student-summary { grid-template-columns: 1fr 1fr; }
+  .student-read-card { align-items: flex-start; flex-direction: column; }
 }
 
 
