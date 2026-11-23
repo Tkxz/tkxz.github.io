@@ -10,10 +10,10 @@
     <meta name="theme-color" content="#f7f6f0" />
     <script>try { if (localStorage.getItem("biblioteca-theme-admin") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Administración | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=dark-mode-7" />
+    <link rel="stylesheet" href="styles.css?v=dark-mode-9" />
     <script src="data.js" defer></script>
     <script src="local.js?v=return-ticket-migration-1" defer></script>
-    <script src="script.js?v=dark-mode-8" defer></script>
+    <script src="script.js?v=dark-mode-10" defer></script>
   </head>
   <body data-role="admin">
     <header class="site-header">
@@ -57,9 +57,9 @@
           <div class="table-scroll" role="region" aria-label="Inventario de libros" tabindex="0"><table><thead><tr><th>Libro</th><th>ISBN</th><th>Total</th><th>Disponibles</th><th>Prestados</th><th>Estado físico</th><th>Acciones</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
           <p class="module-empty" id="inventory-empty" hidden>No hay libros que coincidan con la búsqueda.</p>
           <nav class="catalog-pagination" id="inventory-pagination" aria-label="Paginación del inventario" hidden>
-            <button class="catalog-page-button" type="button" data-inventory-page="previous" aria-label="Página anterior">Anterior</button>
+            <button class="catalog-page-button" type="button" data-page="previous" aria-label="Página anterior">Anterior</button>
             <span class="catalog-page-status" id="inventory-page-status" aria-live="polite"></span>
-            <button class="catalog-page-button" type="button" data-inventory-page="next" aria-label="Página siguiente">Siguiente</button>
+            <button class="catalog-page-button" type="button" data-page="next" aria-label="Página siguiente">Siguiente</button>
           </nav>
         </div>
         <div class="management-panel" id="panel-loans" role="tabpanel" hidden>

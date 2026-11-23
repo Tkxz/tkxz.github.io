@@ -746,8 +746,19 @@ function renderCategoryFilters() {
   });
 }
 
-const CATALOG_PAGE_SIZE = 15;
+const BOOKS_PER_PAGE = 15;
 let catalogPage = 1;
+
+function updateBookPagination(containerSelector, statusSelector, currentPage, totalItems) {
+  const pageCount = Math.max(1, Math.ceil(totalItems / BOOKS_PER_PAGE));
+  const page = Math.min(currentPage, pageCount);
+  const pagination = $(containerSelector);
+  pagination.hidden = pageCount <= 1;
+  $(statusSelector).textContent = `Página ${page} de ${pageCount}`;
+  pagination.querySelector('[data-page="previous"]').disabled = page === 1;
+  pagination.querySelector('[data-page="next"]').disabled = page === pageCount;
+  return { page, start: (page - 1) * BOOKS_PER_PAGE };
+}
 
 function renderCatalog(resetScroll = false) {
   const grid = $("#book-grid");
@@ -759,11 +770,10 @@ function renderCatalog(resetScroll = false) {
     (selected === "Todos" || catalogFilterCategory(book) === selected)
     && `${book.title} ${book.author} ${book.category} ${book.isbn}`.toLocaleLowerCase("es").includes(query)
   );
-  const pageCount = Math.max(1, Math.ceil(visible.length / CATALOG_PAGE_SIZE));
   if (resetScroll) catalogPage = 1;
-  catalogPage = Math.min(catalogPage, pageCount);
-  const pageStart = (catalogPage - 1) * CATALOG_PAGE_SIZE;
-  grid.innerHTML = visible.slice(pageStart, pageStart + CATALOG_PAGE_SIZE).map((book) => {
+  const pagination = updateBookPagination("#catalog-pagination", "#catalog-page-status", catalogPage, visible.length);
+  catalogPage = pagination.page;
+  grid.innerHTML = visible.slice(pagination.start, pagination.start + BOOKS_PER_PAGE).map((book) => {
     const rating = ratingSummary(book.id);
     const isRead = readBookIds.has(book.id);
     return `<article class="book-card${isRead ? " is-read" : ""}">
@@ -776,16 +786,11 @@ function renderCatalog(resetScroll = false) {
   scroll.hidden = visible.length === 0;
   if (resetScroll) scroll.scrollTop = 0;
   $("#empty-state").hidden = visible.length > 0;
-  const shownStart = visible.length ? pageStart + 1 : 0;
-  const shownEnd = Math.min(pageStart + CATALOG_PAGE_SIZE, visible.length);
+  const shownStart = visible.length ? pagination.start + 1 : 0;
+  const shownEnd = Math.min(pagination.start + BOOKS_PER_PAGE, visible.length);
   $("#results-count").textContent = visible.length
     ? `Mostrando ${shownStart}–${shownEnd} de ${visible.length} ${visible.length === 1 ? "libro" : "libros"}`
     : "Mostrando 0 libros";
-  const pagination = $("#catalog-pagination");
-  pagination.hidden = pageCount <= 1;
-  $("#catalog-page-status").textContent = `Página ${catalogPage} de ${pageCount}`;
-  pagination.querySelector('[data-page-change="previous"]').disabled = catalogPage === 1;
-  pagination.querySelector('[data-page-change="next"]').disabled = catalogPage === pageCount;
   const totalCount = $(".filter-chip[data-category='Todos'] span");
   if (totalCount) totalCount.textContent = data.books.length;
 }
@@ -852,7 +857,6 @@ function showBookDetails(id) {
   dialog.scrollTop = 0;
 }
 
-const ADMIN_PAGE_SIZE = 15;
 let inventoryPage = 1;
 
 function renderInventory(resetPage = false) {
@@ -862,11 +866,10 @@ function renderInventory(resetPage = false) {
     const availability = { available: book.available > 0, low: book.available === 1, out: book.available === 0, all: true };
     return availability[filter] && `${book.title} ${book.author} ${book.isbn}`.toLocaleLowerCase("es").includes(query);
   });
-  const pageCount = Math.max(1, Math.ceil(books.length / ADMIN_PAGE_SIZE));
   if (resetPage) inventoryPage = 1;
-  inventoryPage = Math.min(inventoryPage, pageCount);
-  const pageStart = (inventoryPage - 1) * ADMIN_PAGE_SIZE;
-  $("#inventory-body").innerHTML = books.slice(pageStart, pageStart + ADMIN_PAGE_SIZE).map((book) => `<tr>
+  const pagination = updateBookPagination("#inventory-pagination", "#inventory-page-status", inventoryPage, books.length);
+  inventoryPage = pagination.page;
+  $("#inventory-body").innerHTML = books.slice(pagination.start, pagination.start + BOOKS_PER_PAGE).map((book) => `<tr>
     <td><strong>${escapeHTML(book.title)}</strong><small>${escapeHTML(book.author)}</small></td>
     <td>${escapeHTML(book.isbn || "—")}</td><td>${book.total}</td>
     <td><span class="stock-number ${book.available === 0 ? "danger" : book.available === 1 ? "warning" : ""}">${book.available}</span></td>
@@ -874,11 +877,6 @@ function renderInventory(resetPage = false) {
     <td><div class="row-actions"><button type="button" data-edit-book="${escapeHTML(book.id)}">Editar</button><button type="button" class="danger-action" data-delete-book="${escapeHTML(book.id)}">Eliminar</button></div></td>
     </tr>`).join("");
   $("#inventory-empty").hidden = books.length > 0;
-  const pagination = $("#inventory-pagination");
-  pagination.hidden = pageCount <= 1;
-  $("#inventory-page-status").textContent = `Página ${inventoryPage} de ${pageCount}`;
-  pagination.querySelector('[data-inventory-page="previous"]').disabled = inventoryPage === 1;
-  pagination.querySelector('[data-inventory-page="next"]').disabled = inventoryPage === pageCount;
 }
 
 function statusPill(status) {
@@ -1383,9 +1381,9 @@ function bindUI() {
   });
   $("#book-search")?.addEventListener("input", () => renderCatalog(true));
   $("#catalog-pagination")?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-page-change]");
+    const button = event.target.closest("[data-page]");
     if (!button || button.disabled) return;
-    catalogPage += button.dataset.pageChange === "next" ? 1 : -1;
+    catalogPage += button.dataset.page === "next" ? 1 : -1;
     renderCatalog();
     $("#catalog-scroll").scrollTop = 0;
     $("#catalogo").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1414,9 +1412,9 @@ function bindUI() {
   $("#inventory-search")?.addEventListener("input", () => renderInventory(true));
   $("#inventory-filter")?.addEventListener("change", () => renderInventory(true));
   $("#inventory-pagination")?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-inventory-page]");
+    const button = event.target.closest("[data-page]");
     if (!button || button.disabled) return;
-    inventoryPage += button.dataset.inventoryPage === "next" ? 1 : -1;
+    inventoryPage += button.dataset.page === "next" ? 1 : -1;
     renderInventory();
     $("#panel-inventory .table-scroll").scrollTop = 0;
     $("#panel-inventory").scrollIntoView({ behavior: "smooth", block: "start" });

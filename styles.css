@@ -3,10 +3,9 @@
   --paper: #f7f6f0;
   --white: #fffefa;
   --ink: #1d2c26;
-  --muted: #778078;
+  --muted: #555f58;
   --surface: #fffefa;
   --surface-secondary: #f1f0e9;
-  --text-secondary: #778078;
   --green: #355b46;
   --green-dark: #233e32;
   --orange: #e99361;
@@ -30,9 +29,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .brand-copy { display: grid; gap: 3px; }
 .brand-copy strong { font-size: 13px; letter-spacing: -.02em; }
 .brand-copy small { color: #777d75; font-size: 10px; letter-spacing: .015em; }
-.main-nav { display: flex; align-items: center; gap: 38px; }
-.main-nav { order: 2; }
-.main-nav { margin-right: 0; }
+.main-nav { display: flex; align-items: center; gap: 38px; order: 2; }
 .header-controls { position: static; display: flex; align-items: center; gap: 14px; order: 3; transform: none; }
 .theme-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font-size: 12px; font-weight: 600; cursor: pointer; transition: background-color .35s ease-in-out, color .35s ease-in-out, border-color .35s ease-in-out, transform .25s ease; }
 .theme-toggle:hover { border-color: var(--green); background: var(--surface-secondary); }
@@ -489,7 +486,6 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 
 /* Escala tipográfica cómoda para lectura en escritorio y dispositivos grandes. */
 body { font-family: var(--sans); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: auto; }
-:root { --muted: #555f58; }
 .brand-copy strong { font-size: 18px; }
 .brand-copy small { font-size: 13px; color: #505a52; }
 .nav-link { min-height: 46px; padding: 12px 18px; font-size: 16px; color: #465149; }
@@ -846,7 +842,6 @@ button:active {
   --surface-secondary: #252f28;
   --ink: #e8ede9;
   --muted: #a0aca3;
-  --text-secondary: #a0aca3;
   --line: #354139;
   --green: #758878;
   --green-dark: #526256;
