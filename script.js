@@ -757,8 +757,9 @@ function renderCatalog(resetScroll = false) {
   );
   grid.innerHTML = visible.map((book) => {
     const rating = ratingSummary(book.id);
-    return `<article class="book-card">
-      <div class="book-card-top"><span class="book-category">${escapeHTML(book.category)}</span>${readBookIds.has(book.id) ? '<span class="read-badge">Leído</span>' : ""}</div>
+    const isRead = readBookIds.has(book.id);
+    return `<article class="book-card${isRead ? " is-read" : ""}">
+      <div class="book-card-top"><span class="book-category">${escapeHTML(book.category)}</span>${isRead ? '<span class="read-badge"><span aria-hidden="true">✓</span> Leído</span>' : ""}</div>
       <button class="book-cover cover-art ${escapeHTML(book.cover || "cover-1")}" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver detalles de ${escapeHTML(book.title)}"><span class="cover-title">${escapeHTML(book.title)}</span><span class="cover-author">${escapeHTML(book.author)}</span></button>
       <div class="book-info"><div><h3>${escapeHTML(book.title)}</h3><p>${escapeHTML(book.author)} · ${book.available} disponibles</p><p class="catalog-rating">${rating.count ? `★ ${rating.average.toFixed(1)} (${rating.count} reseñas)` : "Sin valoraciones"}</p></div>
       <button class="book-arrow" type="button" data-book="${escapeHTML(book.id)}" aria-label="Más información de ${escapeHTML(book.title)}">↗</button></div></article>`;
