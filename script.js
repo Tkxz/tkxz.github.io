@@ -746,8 +746,12 @@ function renderCategoryFilters() {
   });
 }
 
+const CATALOG_PAGE_SIZE = 15;
+let catalogPage = 1;
+
 function renderCatalog(resetScroll = false) {
   const grid = $("#book-grid");
+  if (!grid) return;
   const query = $("#book-search").value.trim().toLocaleLowerCase("es");
   const selected = $(".filter-chip.selected")?.dataset.category || "Todos";
   const readBookIds = new Set(getReadBooks().map((book) => book.id));
@@ -755,7 +759,11 @@ function renderCatalog(resetScroll = false) {
     (selected === "Todos" || catalogFilterCategory(book) === selected)
     && `${book.title} ${book.author} ${book.category} ${book.isbn}`.toLocaleLowerCase("es").includes(query)
   );
-  grid.innerHTML = visible.map((book) => {
+  const pageCount = Math.max(1, Math.ceil(visible.length / CATALOG_PAGE_SIZE));
+  if (resetScroll) catalogPage = 1;
+  catalogPage = Math.min(catalogPage, pageCount);
+  const pageStart = (catalogPage - 1) * CATALOG_PAGE_SIZE;
+  grid.innerHTML = visible.slice(pageStart, pageStart + CATALOG_PAGE_SIZE).map((book) => {
     const rating = ratingSummary(book.id);
     const isRead = readBookIds.has(book.id);
     return `<article class="book-card${isRead ? " is-read" : ""}">
@@ -768,7 +776,16 @@ function renderCatalog(resetScroll = false) {
   scroll.hidden = visible.length === 0;
   if (resetScroll) scroll.scrollTop = 0;
   $("#empty-state").hidden = visible.length > 0;
-  $("#results-count").textContent = `Mostrando ${visible.length} ${visible.length === 1 ? "libro" : "libros"}`;
+  const shownStart = visible.length ? pageStart + 1 : 0;
+  const shownEnd = Math.min(pageStart + CATALOG_PAGE_SIZE, visible.length);
+  $("#results-count").textContent = visible.length
+    ? `Mostrando ${shownStart}–${shownEnd} de ${visible.length} ${visible.length === 1 ? "libro" : "libros"}`
+    : "Mostrando 0 libros";
+  const pagination = $("#catalog-pagination");
+  pagination.hidden = pageCount <= 1;
+  $("#catalog-page-status").textContent = `Página ${catalogPage} de ${pageCount}`;
+  pagination.querySelector('[data-page-change="previous"]').disabled = catalogPage === 1;
+  pagination.querySelector('[data-page-change="next"]').disabled = catalogPage === pageCount;
   const totalCount = $(".filter-chip[data-category='Todos'] span");
   if (totalCount) totalCount.textContent = data.books.length;
 }
@@ -835,14 +852,21 @@ function showBookDetails(id) {
   dialog.scrollTop = 0;
 }
 
-function renderInventory() {
+const ADMIN_PAGE_SIZE = 15;
+let inventoryPage = 1;
+
+function renderInventory(resetPage = false) {
   const query = $("#inventory-search").value.trim().toLocaleLowerCase("es");
   const filter = $("#inventory-filter").value;
   const books = data.books.filter((book) => {
     const availability = { available: book.available > 0, low: book.available === 1, out: book.available === 0, all: true };
     return availability[filter] && `${book.title} ${book.author} ${book.isbn}`.toLocaleLowerCase("es").includes(query);
   });
-  $("#inventory-body").innerHTML = books.map((book) => `<tr>
+  const pageCount = Math.max(1, Math.ceil(books.length / ADMIN_PAGE_SIZE));
+  if (resetPage) inventoryPage = 1;
+  inventoryPage = Math.min(inventoryPage, pageCount);
+  const pageStart = (inventoryPage - 1) * ADMIN_PAGE_SIZE;
+  $("#inventory-body").innerHTML = books.slice(pageStart, pageStart + ADMIN_PAGE_SIZE).map((book) => `<tr>
     <td><strong>${escapeHTML(book.title)}</strong><small>${escapeHTML(book.author)}</small></td>
     <td>${escapeHTML(book.isbn || "—")}</td><td>${book.total}</td>
     <td><span class="stock-number ${book.available === 0 ? "danger" : book.available === 1 ? "warning" : ""}">${book.available}</span></td>
@@ -850,6 +874,11 @@ function renderInventory() {
     <td><div class="row-actions"><button type="button" data-edit-book="${escapeHTML(book.id)}">Editar</button><button type="button" class="danger-action" data-delete-book="${escapeHTML(book.id)}">Eliminar</button></div></td>
     </tr>`).join("");
   $("#inventory-empty").hidden = books.length > 0;
+  const pagination = $("#inventory-pagination");
+  pagination.hidden = pageCount <= 1;
+  $("#inventory-page-status").textContent = `Página ${inventoryPage} de ${pageCount}`;
+  pagination.querySelector('[data-inventory-page="previous"]').disabled = inventoryPage === 1;
+  pagination.querySelector('[data-inventory-page="next"]').disabled = inventoryPage === pageCount;
 }
 
 function statusPill(status) {
@@ -1353,14 +1382,19 @@ function bindUI() {
     renderCatalog(true);
   });
   $("#book-search")?.addEventListener("input", () => renderCatalog(true));
+  $("#catalog-pagination")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-page-change]");
+    if (!button || button.disabled) return;
+    catalogPage += button.dataset.pageChange === "next" ? 1 : -1;
+    renderCatalog();
+    $("#catalog-scroll").scrollTop = 0;
+    $("#catalogo").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   $("#book-grid")?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-book]");
     if (button) showBookDetails(button.dataset.book);
   });
   $("#book-dialog .dialog-close")?.addEventListener("click", () => $("#book-dialog").close());
-  $("#book-dialog")?.addEventListener("click", (event) => {
-    if (event.target === event.currentTarget) event.currentTarget.close();
-  });
   $(".management-tabs")?.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-panel]");
     if (tab) activateTab(tab.dataset.panel);
@@ -1377,8 +1411,16 @@ function bindUI() {
       confirmBookDeletion(book);
     }
   });
-  $("#inventory-search")?.addEventListener("input", renderInventory);
-  $("#inventory-filter")?.addEventListener("change", renderInventory);
+  $("#inventory-search")?.addEventListener("input", () => renderInventory(true));
+  $("#inventory-filter")?.addEventListener("change", () => renderInventory(true));
+  $("#inventory-pagination")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-inventory-page]");
+    if (!button || button.disabled) return;
+    inventoryPage += button.dataset.inventoryPage === "next" ? 1 : -1;
+    renderInventory();
+    $("#panel-inventory .table-scroll").scrollTop = 0;
+    $("#panel-inventory").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   $("#add-loan")?.addEventListener("click", addLoan);
   $("#loans-body")?.addEventListener("click", (event) => {
     const ticketButton = event.target.closest("[data-view-ticket]");
@@ -1551,6 +1593,32 @@ function setupPage() {
   menuToggle.addEventListener("click", () => showMenu(menuToggle.getAttribute("aria-expanded") !== "true"));
   mainNav.addEventListener("click", (event) => {
     if (event.target.closest("a")) showMenu(false);
+  });
+
+  const themeToggle = $(".theme-toggle");
+  const themeStorageKey = pageRole === "admin" ? "biblioteca-theme-admin" : "biblioteca-theme-student";
+  const setTheme = (theme) => {
+    const isDark = theme === "dark";
+    document.documentElement.dataset.theme = isDark ? "dark" : "light";
+    themeToggle.setAttribute("aria-pressed", String(isDark));
+    themeToggle.setAttribute("aria-label", isDark ? "Activar modo claro" : "Activar modo nocturno");
+    themeToggle.querySelector(".theme-toggle-icon").textContent = isDark ? "☀" : "☾";
+    themeToggle.querySelector(".theme-toggle-label").textContent = isDark ? "Modo claro" : "Modo nocturno";
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", isDark ? "#121714" : "#f7f6f0");
+    try { localStorage.setItem(themeStorageKey, isDark ? "dark" : "light"); } catch (error) {}
+  };
+  setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+  themeToggle.addEventListener("click", () => {
+    setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  });
+
+  document.querySelectorAll("dialog").forEach((dialog) => {
+    dialog.addEventListener("click", (event) => {
+      if (event.target !== dialog) return;
+      if (dialog.id === "management-dialog" && $("#management-dialog-close").disabled) return;
+      if (dialog.id === "delete-confirm-dialog" && $("#delete-confirm-submit").dataset.busy === "true") return;
+      dialog.close();
+    });
   });
 
   refreshState(true).catch((error) => showPageError(error.message));
