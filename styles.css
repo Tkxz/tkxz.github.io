@@ -126,8 +126,8 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .book-card { background: #fffefa; border: 1px solid #ecebe4; padding: 13px 13px 16px; min-width: 0; transform: translateY(0); transition: border-color .25s ease, transform .25s ease, box-shadow .25s ease; }
 .book-card.is-read { border: 2px solid #18713c; border-radius: 14px; background: linear-gradient(135deg, #eaf3e7, #dcebd8); padding: 12px; }
 @media (hover: hover) and (pointer: fine) {
-  .book-card:hover { border-color: #27813D; transform: translateY(-3px); box-shadow: 0 8px 24px rgba(35, 50, 41, .09); }
-  .book-card.is-read:hover { border-color: #125f32; box-shadow: 0 8px 24px rgba(24, 113, 60, .14); }
+  .book-card:hover { border-color: #27813D; transform: translateY(-3px); box-shadow: 0 0 0 1px #27813D, 0 8px 24px rgba(35, 50, 41, .09); }
+  .book-card.is-read:hover { border-color: #125f32; box-shadow: 0 0 0 1px #125f32, 0 8px 24px rgba(24, 113, 60, .14); }
 }
 .book-card, .dialog-copy { overflow-wrap: anywhere; }
 .book-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
