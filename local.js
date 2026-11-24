@@ -82,6 +82,19 @@
     const checkedOut = previous ? previous.total - previous.available : 0;
     if (total < checkedOut) failure(409, "insufficient_total", "El total no puede ser inferior a los ejemplares prestados.");
     if (!conditions.includes(input.condition)) failure(400, "invalid_condition", "Selecciona un estado físico válido.");
+    const locationType = input.locationType ?? previous?.locationType ?? "Biblioteca";
+    if (!["Biblioteca", "Sala de clases"].includes(locationType)) failure(400, "invalid_location", "Selecciona Biblioteca o Sala de clases.");
+    const classroom = locationType === "Sala de clases" ? (input.classroom ?? previous?.classroom ?? "") : "";
+    if (locationType === "Sala de clases" && !["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo", "8vo"].includes(classroom)) {
+      failure(400, "invalid_classroom", "Selecciona un curso entre 1ro y 8vo básico.");
+    }
+    const coverImage = input.coverImage ?? previous?.coverImage ?? "";
+    const validCoverImage = coverImage === ""
+      || (typeof coverImage === "string" && coverImage.length <= 800000 && (
+        /^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(coverImage)
+        || /^assets\/portadas\/[A-Za-z0-9_./-]+\.(?:webp|png|jpe?g)$/i.test(coverImage)
+      ));
+    if (!validCoverImage) failure(400, "invalid_cover", "La portada debe ser una imagen válida y ligera.");
     return {
       title: textField(input.title, "El título", { max: 120 }),
       author: textField(input.author, "El autor"),
@@ -93,6 +106,9 @@
       total,
       available: total - checkedOut,
       condition: input.condition,
+      locationType,
+      classroom,
+      coverImage,
     };
   }
 
@@ -101,8 +117,8 @@
   }
 
   function catalogBook(book) {
-    const { id, title, author, category, pages, cover, description, isbn, publisher, year, available, condition } = book;
-    return { id, title, author, category, pages, cover, description, isbn, publisher, year, available, condition };
+    const { id, title, author, category, pages, cover, coverImage, description, isbn, publisher, year, available, condition, locationType, classroom } = book;
+    return { id, title, author, category, pages, cover, coverImage, description, isbn, publisher, year, available, condition, locationType, classroom };
   }
 
   function publicLoan(loan, today) {
@@ -490,7 +506,25 @@
         requireRole(actor, "student");
         return update((state) => {
           if (body.type !== "loan" && body.type !== "return") failure(400, "invalid_request_type", "Selecciona un tipo de solicitud válido.");
-          if (body.type === "return") failure(403, "admin_only_return", "Las devoluciones deben ser registradas por administración.");
+          if (body.type === "return") {
+            const loan = findRecord(state.loans, body.loanId, "El préstamo");
+            if (loan.studentId !== actor.id) failure(403, "return_request_owner", "Solo puedes solicitar la devolución de tus propios préstamos.");
+            if (isReturned(loan)) failure(409, "loan_already_returned", "Este libro ya fue devuelto.");
+            const book = state.books.find((item) => item.id === loan.bookId);
+            if (!book) failure(404, "book_not_found", "No se encontró el libro asociado al préstamo.");
+            const duplicateReturn = state.requests.some((request) =>
+              request.status === "Pendiente" && request.type === "return" && request.loanId === loan.id);
+            if (duplicateReturn) failure(409, "duplicate_return_request", "Ya enviaste una solicitud de devolución para este préstamo.");
+            const current = now();
+            const today = schoolDate.format(current);
+            state.requests.push({
+              id: createId(), type: "return", studentId: actor.id, student: actor.name,
+              bookId: book.id, bookTitle: book.title, loanId: loan.id,
+              dueDate: loan.dueDate || null, ticketRequested: true, ticketId: null,
+              status: "Pendiente", createdAt: today,
+            });
+            return;
+          }
           const book = availableBook(state, body.bookId);
           const dueDate = dateField(body.dueDate);
           const ticketRequested = true;

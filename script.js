@@ -12,7 +12,9 @@ try {
 } catch (error) {}
 
 const normalizeBookISBN = (value) => String(value || "").replace(/^ISBN:?/i, "").replace(/[^0-9x]/gi, "").toUpperCase();
-const localCoverArtworkForBook = (book) => globalThis.BIBLIOTECA_BOOK_COVERS?.[book?.id] || "";
+const localCoverArtworkForBook = (book) => typeof book?.coverImage === "string"
+  ? book.coverImage
+  : globalThis.BIBLIOTECA_BOOK_COVERS?.[book?.id] || "";
 const googleBookCoverForBook = () => null;
 const coverArtworkForBook = (book) => localCoverArtworkForBook(book);
 const googleBooksInfoURLForBook = () => "";
@@ -21,6 +23,39 @@ function persistGoogleBookCoverCache() {
   try {
     localStorage.setItem(googleBookCoverCacheKey, JSON.stringify(Object.fromEntries([...googleBookCoverCache].slice(-600))));
   } catch (error) {}
+}
+
+async function encodeUploadedCover(file) {
+  if (!file || !["image/jpeg", "image/png"].includes(file.type)) throw new Error("Solo se permiten imágenes JPG o PNG.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("La imagen debe pesar 5 MB o menos.");
+  const objectURL = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("No se pudo abrir esta imagen."));
+      element.src = objectURL;
+    });
+    if (image.naturalWidth > 7000 || image.naturalHeight > 7000 || image.naturalWidth * image.naturalHeight > 30_000_000) {
+      throw new Error("La resolución de la portada es demasiado grande.");
+    }
+    const scale = Math.min(1, 900 / image.naturalWidth, 1300 / image.naturalHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("No se pudo procesar la imagen.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    for (const quality of [.84, .72, .60, .48]) {
+      const jpeg = canvas.toDataURL("image/jpeg", quality);
+      if (jpeg.length <= 800_000) return jpeg;
+    }
+    throw new Error("La imagen optimizada supera el límite permitido. Prueba con una imagen más pequeña.");
+  } finally {
+    URL.revokeObjectURL(objectURL);
+  }
 }
 
 function googleBookURL(value) {
@@ -844,18 +879,23 @@ function bookStats() {
 function animateStatValue(element, target) {
   const previous = Number(element.textContent || 0);
   element.dataset.value = String(target);
+  const firstRender = element.dataset.initialized !== "true";
+  element.dataset.initialized = "true";
   if (previous === target) {
     element.textContent = target;
     return;
   }
   const card = element.closest(".stat-card");
   if (card) {
-    const direction = target > previous ? "is-increasing" : "is-decreasing";
-    card.classList.remove("is-updating", "is-increasing", "is-decreasing");
+    const direction = firstRender
+      ? (card.dataset.statKey === "out" && target > 0 ? "is-decreasing" : "is-increasing")
+      : target > previous ? "is-increasing" : "is-decreasing";
+    card.classList.remove("is-updating", "is-trend-animating", "is-increasing", "is-decreasing");
     void card.offsetWidth;
-    card.classList.add("is-updating", direction);
+    if (!firstRender) card.classList.add("is-updating");
+    card.classList.add("is-trend-animating", direction);
     window.clearTimeout(card.highlightTimer);
-    card.highlightTimer = window.setTimeout(() => card.classList.remove("is-updating", "is-increasing", "is-decreasing"), previous === 0 ? 2050 : 1350);
+    card.highlightTimer = window.setTimeout(() => card.classList.remove("is-updating", "is-trend-animating", "is-increasing", "is-decreasing"), previous === 0 ? 2050 : 1350);
   }
   if (element.counterFrame) cancelAnimationFrame(element.counterFrame);
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -895,8 +935,53 @@ function renderStats() {
   metrics.forEach(([key, , value]) => {
     const card = container.querySelector(`[data-stat-key="${key}"]`);
     const number = card?.querySelector(".stat-value");
+    if (key === "out") card?.classList.toggle("has-count", Number(value) > 0);
     if (number) animateStatValue(number, value);
   });
+}
+
+function bookLocationLabel(book) {
+  return book.locationType === "Sala de clases"
+    ? `Sala de clases · ${book.classroom || "Curso sin indicar"} básico`
+    : "Biblioteca";
+}
+
+function renderAdminAnalytics() {
+  const requestCounts = new Map();
+  const studentRequestCounts = new Map();
+  for (const request of data.requests.filter((item) => item.type === "loan")) {
+    if (request.bookId) requestCounts.set(request.bookId, (requestCounts.get(request.bookId) || 0) + 1);
+    const studentName = String(request.student || "Estudiante").trim();
+    studentRequestCounts.set(studentName, (studentRequestCounts.get(studentName) || 0) + 1);
+  }
+  const rankedBooks = [...requestCounts].map(([bookId, count]) => ({
+    book: data.books.find((item) => String(item.id) === String(bookId)), count,
+  })).filter((item) => item.book).sort((a, b) => b.count - a.count || a.book.title.localeCompare(b.book.title, "es"));
+  const ratingCounts = new Map();
+  const ratingSums = new Map();
+  const studentReviewCounts = new Map();
+  for (const review of data.reviews) {
+    ratingCounts.set(review.bookId, (ratingCounts.get(review.bookId) || 0) + 1);
+    ratingSums.set(review.bookId, (ratingSums.get(review.bookId) || 0) + Number(review.rating || 0));
+    const studentName = String(review.user || "Estudiante").trim();
+    studentReviewCounts.set(studentName, (studentReviewCounts.get(studentName) || 0) + 1);
+  }
+  const bestRated = [...ratingCounts].map(([bookId, count]) => ({
+    book: data.books.find((item) => String(item.id) === String(bookId)),
+    average: ratingSums.get(bookId) / count, count,
+  })).filter((item) => item.book).sort((a, b) => b.average - a.average || b.count - a.count || a.book.title.localeCompare(b.book.title, "es"));
+  const topStudents = (counts) => [...counts].map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "es")).slice(0, 3);
+  const studentList = (rows, emptyMessage) => rows.length
+    ? `<ol class="analytics-ranking">${rows.map((row) => `<li><span>${escapeHTML(row.name)}</span><strong>${row.count}</strong></li>`).join("")}</ol>`
+    : `<p class="analytics-empty">${emptyMessage}</p>`;
+  const cards = [
+    `<article class="analytics-card"><span>Libro más pedido</span>${rankedBooks[0] ? `<strong>${escapeHTML(rankedBooks[0].book.title)}</strong><small>${rankedBooks[0].count} ${rankedBooks[0].count === 1 ? "préstamo" : "préstamos"}</small>` : '<p class="analytics-empty">Sin préstamos registrados.</p>'}</article>`,
+    `<article class="analytics-card"><span>Mejor rankeado</span>${bestRated[0] ? `<strong>${escapeHTML(bestRated[0].book.title)}</strong><small>★ ${bestRated[0].average.toFixed(1)} · ${bestRated[0].count} ${bestRated[0].count === 1 ? "reseña" : "reseñas"}</small>` : '<p class="analytics-empty">Sin reseñas publicadas.</p>'}</article>`,
+    `<article class="analytics-card"><span>Top estudiantes · solicitudes</span>${studentList(topStudents(studentRequestCounts), "Sin solicitudes registradas.")}</article>`,
+    `<article class="analytics-card"><span>Top estudiantes · reseñas</span>${studentList(topStudents(studentReviewCounts), "Sin reseñas publicadas.")}</article>`,
+  ];
+  $("#admin-analytics-grid").innerHTML = cards.join("");
 }
 
 function ratingSummary(bookId) {
@@ -1024,6 +1109,8 @@ function renderMobileMyBooks() {
     .filter((item) => item.status !== "Devuelto")
     .map((item) => ({
       book: data.books.find((book) => book.id === item.bookId),
+      loanId: item.id,
+      returnPending: data.requests.some((request) => request.type === "return" && request.loanId === item.id && request.status === "Pendiente"),
       title: item.bookTitle,
       status: item.status === "Vencido" ? "Devolución pendiente" : "Préstamo activo",
       date: item.dueDate || item.loanDate,
@@ -1033,13 +1120,14 @@ function renderMobileMyBooks() {
   const items = [...requested, ...borrowed]
     .filter((item) => item.title || item.book)
     .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
-  list.innerHTML = items.length ? items.map(({ book, title, status, date, dateLabel, icon }) => `
-    <article class="mobile-my-book-card${status === "Listo para retirar" ? " is-ready" : ""}">
+  list.innerHTML = items.length ? items.map(({ book, title, status, date, dateLabel, icon, loanId, returnPending }) => `
+    <article class="mobile-my-book-card${status === "Listo para retirar" ? " is-ready" : ""}${loanId ? " is-selectable" : ""}"${loanId ? ` role="button" tabindex="0" data-open-return-loan="${escapeHTML(loanId)}" aria-label="Ver ${escapeHTML(book?.title || title || "libro")} y solicitar devolución"` : ""}>
       <div class="mobile-my-book-copy">
         <div class="mobile-my-book-status"><span aria-hidden="true">${icon}</span>${status}</div>
         <h4>${escapeHTML(book?.title || title || "Libro")}</h4>
         <p>${escapeHTML(book?.author || "Biblioteca escolar")}</p>
         ${date ? `<small><strong>${escapeHTML(dateLabel)}</strong> · ${escapeHTML(formatDate(String(date).slice(0, 10)))}</small>` : ""}
+        ${loanId ? `<span class="mobile-my-book-open-hint">${returnPending ? "Ver solicitud de devolución" : "Ver libro y solicitar devolución"}</span>` : ""}
       </div>
       ${book ? (bookCoverImageMarkup(book, "mobile-my-book-cover") || `<span class="mobile-my-book-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"></span>`) : ""}
     </article>`).join("") : '<p class="mobile-my-books-empty">Aún no tienes libros en seguimiento. Encuentra tu próxima lectura.</p>';
@@ -1103,7 +1191,7 @@ function renderCatalog(resetScroll = false) {
     return `<article class="book-card${isRead ? " is-read" : ""}">
       <div class="book-card-top"><span class="book-category">${escapeHTML(book.category)}</span>${isRead ? '<span class="read-badge"><span aria-hidden="true">✓</span> Leído</span>' : ""}</div>
       <button class="book-cover ${coverImage ? "book-cover-photo" : `cover-art ${escapeHTML(book.cover || "cover-1")}`}" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver detalles de ${escapeHTML(book.title)}">${coverImage ? coverMarkup : `<span class="cover-title">${escapeHTML(book.title)}</span><span class="cover-author">${escapeHTML(book.author)}</span>`}</button>
-      <div class="book-info"><div><h3>${escapeHTML(book.title)}</h3><p>${escapeHTML(book.author)}</p><p class="catalog-availability ${availabilityClass}"><span aria-hidden="true"></span>${availabilityLabel}</p><p class="catalog-rating">${rating.count ? `★ ${rating.average.toFixed(1)} (${rating.count} reseñas)` : "Sin valoraciones"}</p></div>
+      <div class="book-info"><div><h3>${escapeHTML(book.title)}</h3><p>${escapeHTML(book.author)}</p><p class="catalog-location">${escapeHTML(bookLocationLabel(book))}</p><p class="catalog-availability ${availabilityClass}"><span aria-hidden="true"></span>${availabilityLabel}</p><p class="catalog-rating">${rating.count ? `★ ${rating.average.toFixed(1)} (${rating.count} reseñas)` : "Sin valoraciones"}</p></div>
       <button class="book-arrow" type="button" data-book="${escapeHTML(book.id)}" aria-label="Más información de ${escapeHTML(book.title)}">↗</button></div></article>`;
   }).join("");
   renderMobileBookShelves(pageBooks);
@@ -1126,7 +1214,7 @@ function renderCatalog(resetScroll = false) {
   if (totalCount) totalCount.textContent = data.books.length;
 }
 
-function showBookDetails(id) {
+function showBookDetails(id, returnLoanId = null) {
   const book = data.books.find((item) => item.id === id);
   if (!book) return;
   const cover = $("#dialog-cover");
@@ -1140,11 +1228,40 @@ function showBookDetails(id) {
   $("#dialog-author").textContent = `Por ${book.author}`;
   $("#dialog-description").textContent = book.description || "Sin descripción disponible.";
   const rating = ratingSummary(book.id);
-  $("#dialog-meta").textContent = [book.pages, `${book.available} ejemplares disponibles`, rating.count ? `★ ${rating.average.toFixed(1)}/5 (${rating.count} reseñas)` : "Sin valoraciones"].filter(Boolean).join(" · ");
+  $("#dialog-meta").textContent = [book.pages, bookLocationLabel(book), `${book.available} ejemplares disponibles`, rating.count ? `★ ${rating.average.toFixed(1)}/5 (${rating.count} reseñas)` : "Sin valoraciones"].filter(Boolean).join(" · ");
   renderBookReviews(book.id);
   $(".availability-note").textContent = `Estado físico: ${book.condition || "No especificado"}. ISBN: ${book.isbn || "No registrado"}.`;
   $("#student-loan-form")?.remove();
+  $("#student-return-form")?.remove();
   if (data.user?.role === "student") {
+    if (returnLoanId) {
+      const loan = data.loans.find((item) => item.id === returnLoanId && item.status !== "Devuelto");
+      if (loan) {
+        const returnPending = data.requests.some((request) => request.type === "return" && request.loanId === loan.id && request.status === "Pendiente");
+        const form = document.createElement("form");
+        form.id = "student-return-form";
+        form.className = "student-loan-form";
+        const submit = document.createElement("button");
+        submit.id = "student-return-request";
+        submit.className = "action-button";
+        submit.type = "submit";
+        submit.textContent = returnPending ? "Devolución solicitada" : "Solicitar devolución";
+        submit.disabled = returnPending;
+        const errorRegion = document.createElement("p");
+        errorRegion.className = "form-error";
+        errorRegion.setAttribute("role", "alert");
+        errorRegion.hidden = true;
+        form.append(errorRegion, submit);
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          runAction(submit, async () => {
+            await mutate("/requests", "POST", { type: "return", loanId: loan.id }, "Solicitud de devolución enviada. Espera la confirmación de biblioteca.");
+            if (form.isConnected) $("#book-dialog").close();
+          }, errorRegion);
+        });
+        $(".dialog-copy").append(form);
+      }
+    } else {
     const form = document.createElement("form");
     form.id = "student-loan-form";
     form.className = "student-loan-form";
@@ -1185,6 +1302,7 @@ function showBookDetails(id) {
       }, errorRegion);
     });
     $(".dialog-copy").append(form);
+    }
   }
   const dialog = $("#book-dialog");
   dialog.showModal();
@@ -1222,6 +1340,7 @@ function renderInventory(resetPage = false) {
     return `<tr tabindex="0" data-inventory-book="${escapeHTML(book.id)}" aria-selected="${book.id === selectedInventoryBookId}">
       <td><div class="inventory-book-cell">${cover || fallback}<span class="inventory-book-copy"><strong>${escapeHTML(book.title)}</strong><small>${escapeHTML(book.author)}</small></span></div></td>
       <td><span class="inventory-theme">${escapeHTML(primaryCategory(book.category) || "Colección")}</span></td>
+      <td><span class="inventory-theme">${escapeHTML(bookLocationLabel(book))}</span></td>
       <td class="inventory-total-cell">${book.total}</td>
       <td><span class="stock-number ${book.available === 0 ? "danger" : book.available === 1 ? "warning" : ""}">${book.available}</span></td>
       <td><div class="row-actions"><button type="button" data-edit-book="${escapeHTML(book.id)}">Ajustar</button><button type="button" class="danger-action inventory-delete-action" data-delete-book="${escapeHTML(book.id)}" aria-label="Eliminar ${escapeHTML(book.title)}">×</button></div></td>
@@ -1279,6 +1398,7 @@ function showInventoryDetail(book) {
     <dl class="inventory-detail-stats">
       <div><dt>Ejemplares disponibles</dt><dd>${book.available} <span>de ${book.total}</span></dd></div>
       <div><dt>En circulación</dt><dd>${Math.max(0, book.total - book.available)}</dd></div>
+      <div><dt>Zona</dt><dd>${escapeHTML(bookLocationLabel(book))}</dd></div>
       <div><dt>Estado físico</dt><dd>${escapeHTML(book.condition || "Sin registrar")}</dd></div>
       <div><dt>ISBN</dt><dd>${escapeHTML(book.isbn || "Sin registrar")}</dd></div>
     </dl>
@@ -1328,22 +1448,30 @@ function statusPill(status) {
 
 function renderLoans() {
   const query = $("#loan-search").value.trim().toLocaleLowerCase("es");
-  const filter = $("#loan-filter").value;
-  const loans = [...data.loans].reverse().map((loan) => ({ ...loan, title: data.books.find((book) => book.id === loan.bookId)?.title || loan.bookTitle || "Libro eliminado" }))
-    .filter((loan) => loan.status !== "Devuelto"
-      && (filter === "all" || loan.status === filter)
-      && `${loan.user} ${loan.title}`.toLocaleLowerCase("es").includes(query));
-  $("#loans-body").innerHTML = loans.map((loan) => {
-    const remaining = (Date.parse(loan.dueDate) - Date.parse(dateToday())) / 86400000;
-    const dueNote = remaining < 0 ? `${Math.abs(remaining)} días de atraso` : `${remaining} días restantes`;
-    const returned = loan.status === "Devuelto";
-    const ticket = loan.ticketId ? `<button class="table-action" type="button" data-view-ticket="${escapeHTML(loan.id)}">${escapeHTML(loan.ticketId)}</button>` : "—";
-    const action = returned ? `<small>Devuelto ${formatDate(loan.returnedAt)}</small>` : `<button class="table-action" type="button" data-return-loan="${escapeHTML(loan.id)}">Registrar devolución</button>`;
-    return `<tr><td><strong>${escapeHTML(loan.user)}</strong></td><td>${escapeHTML(loan.title)}</td>
-      <td>${formatDate(loan.loanDate)}</td><td>${formatDate(loan.dueDate)}${returned ? "" : `<small>${dueNote}</small>`}</td>
-      <td>${ticket}</td><td>${statusPill(loan.status)}</td><td>${action}</td></tr>`;
-  }).join("");
-  $("#loans-empty").hidden = loans.length > 0;
+  const requests = [...data.requests].reverse().filter((request) =>
+    request.status === "Pendiente"
+    && `${request.student} ${request.bookTitle || ""}`.toLocaleLowerCase("es").includes(query));
+  const requestRows = requests.map((request) => {
+    const book = data.books.find((item) => item.id === request.bookId);
+    const title = book?.title || request.bookTitle || "Libro eliminado";
+    const type = request.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución";
+    const ticketLoan = request.ticketId ? data.loans.find((loan) => loan.ticketId === request.ticketId) : null;
+    const returnTicketLoan = request.ticketId ? data.loans.find((loan) => loan.returnTicketId === request.ticketId) : null;
+    const ticket = returnTicketLoan
+      ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-return-ticket="${escapeHTML(returnTicketLoan.id)}">Ver</button></div>`
+      : ticketLoan
+        ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">Ver</button></div>`
+        : request.type === "loan" ? `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>` : "—";
+    const action = request.status === "Pendiente"
+      ? `<div class="row-actions"><button type="button" data-approve-request="${escapeHTML(request.id)}">Aprobar</button><button type="button" class="danger-action" data-reject-request="${escapeHTML(request.id)}">Rechazar</button></div>`
+      : "—";
+    return { date: request.createdAt || "", html: `<tr class="loan-request-row"><td><strong>${escapeHTML(request.student)}</strong></td><td>${escapeHTML(title)}</td><td>${type}</td>
+      <td>${formatDate(request.createdAt)}</td><td>${formatDate(request.dueDate)}</td><td>${ticket}</td><td>${statusPill(request.status)}</td><td>${action}</td></tr>` };
+  });
+  const rows = requestRows.sort((a, b) => b.date.localeCompare(a.date));
+  $("#loans-body").innerHTML = rows.map(({ html }) => html).join("");
+  $("#loans-empty").hidden = rows.length > 0;
+  $("#pending-request-count").textContent = data.requests.filter((request) => request.status === "Pendiente").length;
 }
 
 function showLoanTicket(id) {
@@ -1428,26 +1556,6 @@ function showReviewTicket(id) {
   $("#ticket-dialog").showModal();
 }
 
-function renderRequests() {
-  const filter = $("#request-filter").value;
-  const requests = [...data.requests].reverse().filter((request) => filter === "all" || request.status === filter);
-  $("#requests-body").innerHTML = requests.map((request) => {
-    const book = data.books.find((item) => item.id === request.bookId);
-    const type = request.type === "loan" ? "Préstamo" : "Devolución";
-    const ticketLoan = request.ticketId ? data.loans.find((loan) => loan.ticketId === request.ticketId) : null;
-    const returnTicketLoan = request.ticketId ? data.loans.find((loan) => loan.returnTicketId === request.ticketId) : null;
-    const ticket = returnTicketLoan
-      ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-return-ticket="${escapeHTML(returnTicketLoan.id)}">Ver</button></div>`
-      : ticketLoan
-      ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">Ver</button></div>`
-      : request.type === "loan" ? `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>` : "—";
-    const action = request.status === "Pendiente" ? `<div class="row-actions"><button type="button" data-approve-request="${escapeHTML(request.id)}">Aprobar</button><button type="button" class="danger-action" data-reject-request="${escapeHTML(request.id)}">Rechazar</button></div>` : "—";
-    return `<tr><td>${escapeHTML(request.student)}</td><td>${escapeHTML(book?.title || request.bookTitle || "Libro eliminado")}</td><td>${type}</td><td>${formatDate(request.createdAt)}</td><td>${formatDate(request.dueDate)}</td><td>${ticket}</td><td>${statusPill(request.status)}</td><td>${action}</td></tr>`;
-  }).join("");
-  $("#requests-empty").hidden = requests.length > 0;
-  $("#pending-request-count").textContent = data.requests.filter((request) => request.status === "Pendiente").length;
-}
-
 function renderStudentPanel() {
   const { loans, requests } = data;
   const readBooks = getReadBooks();
@@ -1459,10 +1567,8 @@ function renderStudentPanel() {
   const pendingLoans = requests.filter((request) => request.type === "loan" && request.status === "Pendiente").length;
   const activityOpen = !$("#student-request-details").hidden;
   const readBooksOpen = !$("#student-read-books").hidden;
-  const activeLoans = loans.filter((loan) => loan.status !== "Devuelto").length;
   $("#student-summary").innerHTML = [
     ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
-    ["Préstamos activos", activeLoans, "Ver préstamos activos", "active"],
     ["Préstamos pendientes", pendingLoans, "Ver solicitudes pendientes", "pending"],
     ["Historial de actividades", loans.length + requests.length, "Ver todos los movimientos", "history"],
   ].map(([label, count, note, key]) => key === "read"
@@ -1612,9 +1718,9 @@ function renderAll() {
   }
   if (data.user.role === "admin") {
     renderStats();
+    renderAdminAnalytics();
     renderInventory();
     renderLoans();
-    renderRequests();
   }
   renderReviews();
 }
@@ -1690,6 +1796,9 @@ function openForm(title, fields, onSubmit) {
     if (field.type === "select" || field.type === "rating") {
       input = `<select name="${name}" ${field.type === "rating" ? "data-rating-picker" : ""} ${required}>${field.options.map(([key, label]) =>
         `<option value="${escapeHTML(key)}" ${String(value) === String(key) ? "selected" : ""}>${escapeHTML(label)}</option>`).join("")}</select>`;
+    } else if (field.type === "cover") {
+      const preview = value ? `<img class="cover-upload-preview" src="${escapeHTML(value)}" alt="Vista previa de portada">` : "";
+      input = `<div class="cover-upload-control"><div class="cover-upload-preview-frame${value ? " has-image" : ""}" data-cover-preview-frame>${preview}<span data-cover-empty${value ? " hidden" : ""}>Sin portada</span></div><div class="cover-upload-actions"><input type="hidden" name="coverImage" value="${escapeHTML(value)}"><label class="secondary-button cover-upload-label">Añadir o cambiar imagen<input class="cover-upload-file" name="coverImageFile" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" aria-label="Añadir o cambiar imagen"></label><button class="secondary-button" type="button" data-remove-cover${value ? "" : " hidden"}>Quitar imagen</button></div><small>Solo JPG o PNG, máximo 5 MB. Resolución máxima: 30 megapíxeles. La portada se optimiza al cargar.</small></div>`;
     } else if (field.type === "checkbox") {
       input = `<input name="${name}" type="checkbox" value="true" ${field.checked ? "checked" : ""}>`;
     } else if (field.type === "textarea") {
@@ -1699,11 +1808,58 @@ function openForm(title, fields, onSubmit) {
         ${field.min !== undefined ? `min="${field.min}"` : ""} ${field.max !== undefined ? `max="${field.max}"` : ""}
         ${field.maxlength ? `maxlength="${field.maxlength}"` : ""} ${required}>`;
     }
-    return `<label class="form-field">${escapeHTML(field.label)}${input}</label>`;
+    const wrapper = field.type === "cover" ? "div" : "label";
+    const conditional = field.name === "classroom" ? " data-classroom-field" : "";
+    return `<${wrapper} class="form-field"${conditional}>${escapeHTML(field.label)}${input}</${wrapper}>`;
   }).join("") + `<p class="form-error" id="management-form-error" role="alert" hidden></p>
     <div class="form-actions"><button class="secondary-button" type="button" id="cancel-management">Cancelar</button><button class="action-button" type="submit">Guardar</button></div>`;
   form.querySelectorAll('input[type="date"]').forEach(attachDatePicker);
   form.querySelectorAll("select").forEach(attachCustomSelect);
+  const locationSelect = form.querySelector('[name="locationType"]');
+  const classroomSelect = form.querySelector('[name="classroom"]');
+  const classroomField = form.querySelector("[data-classroom-field]");
+  if (locationSelect && classroomSelect && classroomField) {
+    const updateClassroomVisibility = () => {
+      const isClassroom = locationSelect.value === "Sala de clases";
+      classroomField.hidden = !isClassroom;
+      classroomSelect.disabled = !isClassroom;
+      classroomSelect.required = isClassroom;
+      if (!isClassroom) classroomSelect.value = "";
+      refreshCustomSelect(classroomSelect);
+    };
+    locationSelect.addEventListener("change", updateClassroomVisibility);
+    updateClassroomVisibility();
+  }
+  const coverFileInput = form.querySelector('[name="coverImageFile"]');
+  const coverValueInput = form.querySelector('[name="coverImage"]');
+  if (coverFileInput && coverValueInput) {
+    const previewFrame = form.querySelector("[data-cover-preview-frame]");
+    const removeCoverButton = form.querySelector("[data-remove-cover]");
+    const showPreview = (src) => {
+      previewFrame.innerHTML = src
+        ? `<img class="cover-upload-preview" src="${escapeHTML(src)}" alt="Vista previa de portada">`
+        : "<span data-cover-empty>Sin portada</span>";
+      previewFrame.classList.toggle("has-image", Boolean(src));
+      removeCoverButton.hidden = !src;
+    };
+    coverFileInput.addEventListener("change", async () => {
+      const file = coverFileInput.files?.[0];
+      if (!file) return;
+      try {
+        const encoded = await encodeUploadedCover(file);
+        coverValueInput.value = encoded;
+        showPreview(encoded);
+      } catch (error) {
+        coverFileInput.value = "";
+        toast(error.message, "error");
+      }
+    });
+    removeCoverButton.addEventListener("click", () => {
+      coverValueInput.value = "";
+      coverFileInput.value = "";
+      showPreview("");
+    });
+  }
   const loanDateInput = form.querySelector('[name="loanDate"]');
   const dueDateInput = form.querySelector('[name="dueDate"]');
   if (loanDateInput && dueDateInput) {
@@ -1724,7 +1880,9 @@ function openForm(title, fields, onSubmit) {
     submit.disabled = cancel.disabled = close.disabled = true;
     errorRegion.hidden = true;
     try {
-      const result = await onSubmit(Object.fromEntries(new FormData(form)));
+      const values = Object.fromEntries(new FormData(form));
+      delete values.coverImageFile;
+      const result = await onSubmit(values);
       dialog.close();
       if (result?.ticketId) showLoanTicket(result.id);
     } catch (error) {
@@ -1747,6 +1905,9 @@ function bookFields(book = {}) {
     { name: "description", label: "Descripción", type: "textarea", value: book.description, required: false, maxlength: 600 },
     { name: "total", label: "Cantidad total de ejemplares", type: "number", value: book.total ?? 1, min: 0, max: 10000 },
     { name: "condition", label: "Estado físico", type: "select", value: book.condition || "Bueno", options: [["Nuevo", "Nuevo"], ["Bueno", "Bueno"], ["Regular", "Regular"], ["Deteriorado", "Deteriorado"]] },
+    { name: "locationType", label: "Zona", type: "select", value: book.locationType || "Biblioteca", options: [["Biblioteca", "Biblioteca"], ["Sala de clases", "Sala de clases"]] },
+    { name: "classroom", label: "Curso", type: "select", dependsOn: "locationType", value: book.classroom || "1ro", required: false, options: [["1ro", "1ro básico"], ["2do", "2do básico"], ["3ro", "3ro básico"], ["4to", "4to básico"], ["5to", "5to básico"], ["6to", "6to básico"], ["7mo", "7mo básico"], ["8vo", "8vo básico"]] },
+    { name: "coverImage", label: "Portada del libro", type: "cover", value: coverArtworkForBook(book) },
   ];
 }
 
@@ -1907,6 +2068,13 @@ function bindUI() {
   });
 
   $("#mobile-my-books")?.addEventListener("click", (event) => {
+    const loanCard = event.target.closest("[data-open-return-loan]");
+    if (loanCard) {
+      const loan = data.loans.find((item) => item.id === loanCard.dataset.openReturnLoan && item.status !== "Devuelto");
+      const book = loan && data.books.find((item) => item.id === loan.bookId);
+      if (book) showBookDetails(book.id, loan.id);
+      return;
+    }
     const button = event.target.closest("[data-my-books-scroll]");
     if (!button) return;
     const list = $("#mobile-my-books-list");
@@ -1915,6 +2083,15 @@ function bindUI() {
     const direction = Number(button.dataset.myBooksScroll) || 1;
     const gap = Number.parseFloat(getComputedStyle(list).columnGap) || 0;
     list.scrollBy({ left: direction * (card.getBoundingClientRect().width + gap), behavior: "smooth" });
+  });
+  $("#mobile-my-books")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const loanCard = event.target.closest("[data-open-return-loan]");
+    if (!loanCard || event.target !== loanCard) return;
+    event.preventDefault();
+    const loan = data.loans.find((item) => item.id === loanCard.dataset.openReturnLoan && item.status !== "Devuelto");
+    const book = loan && data.books.find((item) => item.id === loan.bookId);
+    if (book) showBookDetails(book.id, loan.id);
   });
   $("#available-only")?.addEventListener("change", () => renderCatalog(true));
   $("#book-dialog .dialog-close")?.addEventListener("click", () => $("#book-dialog").close());
@@ -1992,6 +2169,11 @@ function bindUI() {
   });
   $("#add-loan")?.addEventListener("click", addLoan);
   $("#loans-body")?.addEventListener("click", (event) => {
+    const returnTicketButton = event.target.closest("[data-view-return-ticket]");
+    if (returnTicketButton) {
+      showReturnTicket(returnTicketButton.dataset.viewReturnTicket);
+      return;
+    }
     const ticketButton = event.target.closest("[data-view-ticket]");
     if (ticketButton) {
       showLoanTicket(ticketButton.dataset.viewTicket);
@@ -2003,28 +2185,15 @@ function bindUI() {
         const result = await mutate(`/loans/${encodeURIComponent(button.dataset.returnLoan)}/return`, "POST", undefined, "Devolución registrada. Inventario actualizado.");
         if (result?.returnTicketId) showReturnTicket(result.id);
       });
+      return;
     }
+    const requestAction = event.target.closest("[data-approve-request], [data-reject-request]");
+    if (!requestAction) return;
+    const approve = Boolean(requestAction.dataset.approveRequest);
+    const id = requestAction.dataset.approveRequest || requestAction.dataset.rejectRequest;
+    runAction(requestAction, () => mutate(`/requests/${encodeURIComponent(id)}`, "PATCH", { approve }, approve ? "Solicitud aprobada." : "Solicitud rechazada."));
   });
   $("#loan-search")?.addEventListener("input", renderLoans);
-  $("#loan-filter")?.addEventListener("change", renderLoans);
-
-  $("#requests-body")?.addEventListener("click", (event) => {
-    const returnTicketButton = event.target.closest("[data-view-return-ticket]");
-    if (returnTicketButton) {
-      showReturnTicket(returnTicketButton.dataset.viewReturnTicket);
-      return;
-    }
-    const ticketButton = event.target.closest("[data-view-ticket]");
-    if (ticketButton) {
-      showLoanTicket(ticketButton.dataset.viewTicket);
-      return;
-    }
-    const button = event.target.closest("[data-approve-request], [data-reject-request]");
-    if (!button) return;
-    const approve = Boolean(button.dataset.approveRequest);
-    const id = button.dataset.approveRequest || button.dataset.rejectRequest;
-    runAction(button, () => mutate(`/requests/${encodeURIComponent(id)}`, "PATCH", { approve }, approve ? "Petición aprobada." : "Petición rechazada."));
-  });
   $("#student-requests-body")?.addEventListener("click", (event) => {
     const returnTicketButton = event.target.closest("[data-view-return-ticket]");
     if (returnTicketButton) showReturnTicket(returnTicketButton.dataset.viewReturnTicket);
@@ -2068,7 +2237,6 @@ function bindUI() {
     const button = event.target.closest("[data-rerequest-book]");
     if (button) showBookDetails(button.dataset.rerequestBook);
   });
-  $("#request-filter")?.addEventListener("change", renderRequests);
   $("#audit-body")?.addEventListener("click", (event) => {
     const returnTicketButton = event.target.closest("[data-view-return-ticket]");
     if (returnTicketButton) {
@@ -2225,6 +2393,10 @@ function setupPage() {
   });
 
   refreshState(true).catch((error) => showPageError(error.message));
+  window.setInterval(() => {
+    if (document.hidden || data.user?.role !== "admin" || document.querySelector("dialog[open]")) return;
+    refreshState().catch(() => {});
+  }, 5000);
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) refreshState(true).catch((error) => showPageError(error.message));
   });

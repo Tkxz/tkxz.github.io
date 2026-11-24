@@ -480,6 +480,15 @@
 :root[data-theme="dark"] .table-scroll::-webkit-scrollbar-thumb,
 :root[data-theme="dark"] .filter-list::-webkit-scrollbar-thumb { background: #506c79; }
 :root[data-theme="dark"] .custom-select-trigger svg { stroke: #a8c1cb; }
+
+/* En reposo la flecha de tendencia debe seguir siendo neutral también en tema oscuro. */
+:root[data-theme="dark"] .management-stats .stat-card:not(.is-increasing):not(.is-decreasing)::before {
+  background: #a0aca3;
+  box-shadow: none;
+  animation: none;
+}
+:root[data-theme="dark"] .management-stats .stat-card.is-trend-animating::before { animation: metricArrowUp .72s cubic-bezier(.2,.8,.2,1) 2; }
+:root[data-theme="dark"] .management-stats .stat-card.is-decreasing.is-trend-animating::before { animation-name: metricArrowDown; }
 :root[data-theme="dark"] .rating-star:hover { background: #2a414b; }
 :root[data-theme="dark"] .dialog-review-top strong,
 :root[data-theme="dark"] .review-top strong,
@@ -595,6 +604,9 @@
   .mobile-my-books-list::-webkit-scrollbar,
   .mobile-shelf-scroll::-webkit-scrollbar { display: none; }
   .mobile-my-book-card { display: flex; min-height: 91px; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 12px; border: 1px solid #d6e2e5; border-radius: 10px; background: #fff; scroll-snap-align: start; }
+  .mobile-my-book-card.is-selectable { cursor: pointer; transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
+  .mobile-my-book-card.is-selectable:active { transform: scale(.985); }
+  .mobile-my-book-card.is-selectable:focus-visible { outline: 2px solid #155875; outline-offset: 2px; }
   .mobile-my-book-card.is-ready { border-color: #18465c; background: #18465c; color: #f1f6f8; }
   .mobile-my-book-copy { min-width: 0; }
   .mobile-my-book-status { display: flex; align-items: center; gap: 5px; color: #a36d28; font-size: 10px; font-weight: 700; }
@@ -604,6 +616,9 @@
   .mobile-my-book-card p { margin: 0; color: #71838c; font-size: 10px; }
   .mobile-my-book-card small { display: block; margin-top: 7px; color: #73848b; font-size: 9px; }
   .mobile-my-book-card small strong { color: #536d79; }
+  .mobile-my-book-open-hint { display: inline-block; margin-top: 7px; color: #155875; font-size: 9px; font-weight: 700; }
+  .mobile-return-request-button { display: inline-flex; min-height: 30px; align-items: center; justify-content: center; margin-top: 8px; padding: 0 10px; border: 1px solid #155875; border-radius: 7px; background: #155875; color: #fff; font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+  .mobile-return-request-button:disabled { border-color: #d5dfdf; background: #edf2f1; color: #607379; cursor: default; }
   .mobile-my-book-card.is-ready h4 { color: white; }
   .mobile-my-book-card.is-ready p,
   .mobile-my-book-card.is-ready small,
@@ -648,6 +663,9 @@
   :root[data-theme="dark"] .mobile-my-book-card p,
   :root[data-theme="dark"] .mobile-my-book-card small,
   :root[data-theme="dark"] .mobile-my-book-card small strong { color: #a8bbc4; }
+  :root[data-theme="dark"] .mobile-my-book-open-hint { color: #9fc8d6; }
+  :root[data-theme="dark"] .mobile-return-request-button { border-color: #79aebf; background: #28637a; color: #f3f8fa; }
+  :root[data-theme="dark"] .mobile-return-request-button:disabled { border-color: #43555d; background: #2b3b42; color: #a8bbc4; }
   :root[data-theme="dark"] .mobile-my-books-empty { border-color: #344a55; background: #1b2932; color: #a8bbc4; }
   :root[data-theme="dark"] .mobile-my-book-cover,
   :root[data-theme="dark"] .mobile-shelf-cover { background: #23343e; }
@@ -658,7 +676,6 @@
   #catalogo .catalog-footer { margin-top: 4px; }
   #catalogo .catalog-footer .text-link span { display: none; }
   #panel-estudiante #student-opinions { display: none; }
-  #panel-estudiante #student-summary > :first-child { display: none; }
   .student-bottom-nav, .student-bottom-nav * , #catalogo .catalog-footer, #catalogo .catalog-footer * { user-select: text; -webkit-user-select: text; }
 
   #panel-inventory .panel-toolbar { align-items: stretch; flex-direction: row; }
