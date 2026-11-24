@@ -12,9 +12,9 @@ try {
 } catch (error) {}
 
 const normalizeBookISBN = (value) => String(value || "").replace(/^ISBN:?/i, "").replace(/[^0-9x]/gi, "").toUpperCase();
-const localCoverArtworkForBook = () => "";
+const localCoverArtworkForBook = (book) => globalThis.BIBLIOTECA_BOOK_COVERS?.[book?.id] || "";
 const googleBookCoverForBook = () => null;
-const coverArtworkForBook = () => "";
+const coverArtworkForBook = (book) => localCoverArtworkForBook(book);
 const googleBooksInfoURLForBook = () => "";
 
 function persistGoogleBookCoverCache() {
@@ -113,8 +113,21 @@ function refreshOpenGoogleBooksLink() {
 }
 
 function bookCoverImageMarkup(book, className) {
-  return "";
+  const source = localCoverArtworkForBook(book);
+  if (!source) return "";
+  const url = escapeHTML(source);
+  // En tarjetas y detalle, un fondo difuminado de la propia portada rellena el espacio sobrante
+  // (portadas cuadradas o de proporción distinta) sin recortar ni deformar la imagen.
+  const backdrop = /^(book-cover-image|dialog-cover-image|inventory-detail-cover-image|mobile-shelf-cover)$/.test(className)
+    ? `<span class="cover-backdrop" style="background-image:url('${url}')" aria-hidden="true"></span>` : "";
+  return `${backdrop}<img class="${className}" src="${url}" alt="" loading="lazy" decoding="async" data-book-cover-image="true">`;
 }
+document.addEventListener("error", (event) => {
+  const image = event.target;
+  if (!(image instanceof HTMLImageElement) || !image.dataset.bookCoverImage) return;
+  image.parentElement?.querySelector(".cover-backdrop")?.remove();
+  image.remove();
+}, true);
 const roleNames = { admin: "Administrador", student: "Estudiante" };
 const pageRole = document.body.dataset.role;
 const localDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Santiago" });
@@ -1052,7 +1065,8 @@ function renderMobileBookShelves(books) {
     return `<section class="mobile-book-shelf" aria-label="${escapeHTML(label)}">
       <div class="mobile-shelf-heading"><h3>${escapeHTML(label)}<small>${booksInCategory.length} ${booksInCategory.length === 1 ? "título" : "títulos"}</small></h3><div class="mobile-shelf-controls"><button type="button" data-shelf-scroll="-1" aria-label="Desplazar ${escapeHTML(label)} hacia la izquierda">‹</button><button type="button" data-shelf-scroll="1" aria-label="Desplazar ${escapeHTML(label)} hacia la derecha">›</button></div></div>
       <div class="mobile-shelf-scroll">${booksInCategory.map((book) => {
-        const image = bookCoverImageMarkup(book, "mobile-shelf-cover");
+        const shelfCover = bookCoverImageMarkup(book, "mobile-shelf-cover");
+        const image = shelfCover ? `<span class="mobile-shelf-frame">${shelfCover}</span>` : "";
         const fallback = `<span class="mobile-shelf-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"><span class="cover-title">${escapeHTML(book.title)}</span></span>`;
         const availability = book.available > 0 ? "Disponible" : "Lista de espera";
         return `<button class="mobile-book-tile${readBookIds.has(book.id) ? " is-read" : ""}" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver ${escapeHTML(book.title)} de ${escapeHTML(book.author)}">
