@@ -370,7 +370,7 @@
       const comment = textField(input.comment, "El comentario", { min: 5, max: 600 });
       checkReview(comment, seed.prohibitedExpressions);
       if (state.reviews.some((review) => review.ownerId === actor.id && review.bookId === input.bookId && review.id !== previous?.id)) {
-        failure(409, "duplicate_review", "Ya tienes una reseña de este libro. Puedes editarla.");
+        failure(409, "duplicate_review", "No puedes editarla ni hacer otra. Si hay algún problema, comunícate en la sala de computación.");
       }
       return {
         bookId: input.bookId,
