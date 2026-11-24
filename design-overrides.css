@@ -489,6 +489,10 @@
 }
 :root[data-theme="dark"] .management-stats .stat-card.is-trend-animating::before { animation: metricArrowUp .72s cubic-bezier(.2,.8,.2,1) 2; }
 :root[data-theme="dark"] .management-stats .stat-card.is-decreasing.is-trend-animating::before { animation-name: metricArrowDown; }
+
+@media screen and (max-width: 900px), screen and (hover: none) and (pointer: coarse) {
+  body[data-role="student"] #student-desktop-books { display: none !important; }
+}
 :root[data-theme="dark"] .rating-star:hover { background: #2a414b; }
 :root[data-theme="dark"] .dialog-review-top strong,
 :root[data-theme="dark"] .review-top strong,

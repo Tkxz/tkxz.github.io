@@ -1568,6 +1568,19 @@ function renderStudentPanel() {
   const pendingLoans = requests.filter((request) => request.type === "loan" && request.status === "Pendiente").length;
   const activityOpen = !$("#student-request-details").hidden;
   const readBooksOpen = !$("#student-read-books").hidden;
+  const currentLoans = loans.filter((loan) => loan.status !== "Devuelto")
+    .sort((a, b) => String(a.dueDate || "").localeCompare(String(b.dueDate || "")));
+  const desktopBooksSection = $("#student-desktop-books");
+  desktopBooksSection.hidden = currentLoans.length === 0;
+  $("#student-desktop-books-list").innerHTML = currentLoans.map((loan) => {
+    const book = data.books.find((item) => String(item.id) === String(loan.bookId));
+    const returnPending = requests.some((request) => request.type === "return" && request.loanId === loan.id && request.status === "Pendiente");
+    const title = book?.title || loan.bookTitle || "Libro eliminado";
+    const cover = book && coverArtworkForBook(book)
+      ? bookCoverImageMarkup(book, "student-desktop-book-cover")
+      : `<span class="student-desktop-book-cover-fallback cover-art ${escapeHTML(book?.cover || "cover-1")}" aria-hidden="true"><span class="cover-title">${escapeHTML(title)}</span></span>`;
+    return `<article class="student-desktop-book-card">${cover}<div class="student-desktop-book-copy"><span class="student-desktop-book-status${loan.status === "Vencido" ? " is-overdue" : ""}">${loan.status === "Vencido" ? "Devolución atrasada" : "Préstamo activo"}</span><h4>${escapeHTML(title)}</h4><p>${escapeHTML(book?.author || "Autor no disponible")}</p><small>Fecha límite: ${escapeHTML(formatDate(loan.dueDate))}</small></div><button class="action-button" type="button" data-return-request-loan="${escapeHTML(loan.id)}"${returnPending ? " disabled" : ""}>${returnPending ? "Devolución solicitada" : "Solicitar devolución"}</button></article>`;
+  }).join("");
   $("#student-summary").innerHTML = [
     ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
     ["Préstamos pendientes", pendingLoans, "Ver solicitudes pendientes", "pending"],
@@ -2237,6 +2250,12 @@ function bindUI() {
     }
     const button = event.target.closest("[data-rerequest-book]");
     if (button) showBookDetails(button.dataset.rerequestBook);
+  });
+  $("#student-desktop-books-list")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-return-request-loan]");
+    if (!button || button.disabled) return;
+    const loanId = button.dataset.returnRequestLoan;
+    runAction(button, () => mutate("/requests", "POST", { type: "return", loanId }, "Solicitud de devolución enviada. Espera la confirmación de biblioteca."));
   });
   $("#audit-body")?.addEventListener("click", (event) => {
     const returnTicketButton = event.target.closest("[data-view-return-ticket]");

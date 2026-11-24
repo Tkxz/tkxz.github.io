@@ -10,12 +10,12 @@
     <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-student") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Estudiantes | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=reading-metrics-book-zones-3" />
-    <link rel="stylesheet" href="design-overrides.css?v=student-summary-books-only-1" />
+    <link rel="stylesheet" href="styles.css?v=student-desktop-return-1" />
+    <link rel="stylesheet" href="design-overrides.css?v=student-desktop-only-2" />
     <script src="data.js" defer></script>
     <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-webp-1" defer></script>
     <script src="local.js?v=reading-metrics-book-zones-2" defer></script>
-    <script src="script.js?v=reading-metrics-book-zones-2" defer></script>
+    <script src="script.js?v=student-desktop-return-1" defer></script>
   </head>
   <body data-role="student">
     <header class="site-header">
@@ -107,6 +107,10 @@
           <p class="student-toolbar">Estudiante <strong id="student-name"></strong></p>
           <div class="student-summary" id="student-summary"></div>
         </div>
+        <section class="student-desktop-books" id="student-desktop-books" aria-labelledby="student-desktop-books-title" hidden>
+          <div class="student-desktop-books-heading"><div><h3 id="student-desktop-books-title">Tus libros</h3><p>Solicita la devolución de un préstamo activo.</p></div></div>
+          <div class="student-desktop-books-list" id="student-desktop-books-list"></div>
+        </section>
         <section class="student-read-books" id="student-read-books" aria-labelledby="student-read-books-title" hidden>
           <div>
             <h3 id="student-read-books-title">Libros leídos</h3>
