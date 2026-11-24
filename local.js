@@ -85,8 +85,8 @@
     const locationType = input.locationType ?? previous?.locationType ?? "Biblioteca";
     if (!["Biblioteca", "Sala de clases"].includes(locationType)) failure(400, "invalid_location", "Selecciona Biblioteca o Sala de clases.");
     const classroom = locationType === "Sala de clases" ? (input.classroom ?? previous?.classroom ?? "") : "";
-    if (locationType === "Sala de clases" && !["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo", "8vo"].includes(classroom)) {
-      failure(400, "invalid_classroom", "Selecciona un curso entre 1ro y 8vo básico.");
+    if (locationType === "Sala de clases" && !["Pre-kínder", "Kínder", "1ro", "2do", "3ro", "4to", "5to", "6to", "7mo", "8vo"].includes(classroom)) {
+      failure(400, "invalid_classroom", "Selecciona Pre-kínder, Kínder o un curso entre 1ro y 8vo básico.");
     }
     const coverImage = input.coverImage ?? previous?.coverImage ?? "";
     const validCoverImage = coverImage === ""

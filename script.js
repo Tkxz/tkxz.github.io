@@ -941,9 +941,10 @@ function renderStats() {
 }
 
 function bookLocationLabel(book) {
-  return book.locationType === "Sala de clases"
-    ? `Sala de clases · ${book.classroom || "Curso sin indicar"} básico`
-    : "Biblioteca";
+  if (book.locationType !== "Sala de clases") return "Biblioteca";
+  const classroom = book.classroom || "Curso sin indicar";
+  const gradeLabel = ["Pre-kínder", "Kínder"].includes(classroom) ? classroom : `${classroom} básico`;
+  return `Sala de clases · ${gradeLabel}`;
 }
 
 function renderAdminAnalytics() {
@@ -1906,7 +1907,7 @@ function bookFields(book = {}) {
     { name: "total", label: "Cantidad total de ejemplares", type: "number", value: book.total ?? 1, min: 0, max: 10000 },
     { name: "condition", label: "Estado físico", type: "select", value: book.condition || "Bueno", options: [["Nuevo", "Nuevo"], ["Bueno", "Bueno"], ["Regular", "Regular"], ["Deteriorado", "Deteriorado"]] },
     { name: "locationType", label: "Zona", type: "select", value: book.locationType || "Biblioteca", options: [["Biblioteca", "Biblioteca"], ["Sala de clases", "Sala de clases"]] },
-    { name: "classroom", label: "Curso", type: "select", dependsOn: "locationType", value: book.classroom || "1ro", required: false, options: [["1ro", "1ro básico"], ["2do", "2do básico"], ["3ro", "3ro básico"], ["4to", "4to básico"], ["5to", "5to básico"], ["6to", "6to básico"], ["7mo", "7mo básico"], ["8vo", "8vo básico"]] },
+    { name: "classroom", label: "Curso", type: "select", dependsOn: "locationType", value: book.classroom || "1ro", required: false, options: [["Pre-kínder", "Pre-kínder"], ["Kínder", "Kínder"], ["1ro", "1ro básico"], ["2do", "2do básico"], ["3ro", "3ro básico"], ["4to", "4to básico"], ["5to", "5to básico"], ["6to", "6to básico"], ["7mo", "7mo básico"], ["8vo", "8vo básico"]] },
     { name: "coverImage", label: "Portada del libro", type: "cover", value: coverArtworkForBook(book) },
   ];
 }
