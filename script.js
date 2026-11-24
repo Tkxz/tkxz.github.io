@@ -1,5 +1,145 @@
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+const bookCoverArtworks = {
+  "los viajes de gulliver": "gulliver.webp",
+  "el viejo y el mar": "el-viejo-y-el-mar.webp",
+  fuenteovejuna: "fuenteovejuna.webp",
+  "gracia y el forastero": "gracia-y-el-forastero.webp",
+  "estrella y el caleidoscopio": "caleidoscopio.webp",
+  "la serpiente blanca": "serpiente-blanca.webp",
+};
+const googleBookCoverCacheKey = "biblioteca-google-book-covers-v1";
+const googleBookCoverCache = new Map();
+const googleBookCoverPending = new Map();
+let googleBookCoverFlushScheduled = false;
+let googleBookCoverRequestNumber = 0;
+try {
+  const savedGoogleCovers = JSON.parse(localStorage.getItem(googleBookCoverCacheKey) || "{}");
+  Object.entries(savedGoogleCovers).forEach(([isbn, cover]) => googleBookCoverCache.set(isbn, cover));
+} catch (error) {}
+
+const normalizeBookISBN = (value) => String(value || "").replace(/^ISBN:?/i, "").replace(/[^0-9x]/gi, "").toUpperCase();
+const localCoverArtworkForBook = (book) => {
+  const title = String(book?.title || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
+  const filename = bookCoverArtworks[title];
+  return filename ? `assets/portadas/${filename}` : "";
+};
+const googleBookCoverForBook = (book) => googleBookCoverCache.get(normalizeBookISBN(book?.isbn)) || null;
+const coverArtworkForBook = (book) => googleBookCoverForBook(book)?.thumbnailUrl || localCoverArtworkForBook(book);
+const googleBooksInfoURLForBook = (book) => googleBookCoverForBook(book)?.infoUrl || "";
+
+function persistGoogleBookCoverCache() {
+  try {
+    localStorage.setItem(googleBookCoverCacheKey, JSON.stringify(Object.fromEntries([...googleBookCoverCache].slice(-600))));
+  } catch (error) {}
+}
+
+function googleBookURL(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol === "http:") url.protocol = "https:";
+    const trustedHost = url.hostname === "books.google.com" || url.hostname.endsWith(".books.googleusercontent.com");
+    return url.protocol === "https:" && trustedHost ? url.href : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function flushGoogleBookCoverQueue() {
+  googleBookCoverFlushScheduled = false;
+  const batch = [...googleBookCoverPending.entries()];
+  googleBookCoverPending.clear();
+  if (!batch.length) return;
+
+  const callbackName = `__bibliotecaGoogleCovers${++googleBookCoverRequestNumber}`;
+  const request = document.createElement("script");
+  const params = new URLSearchParams({
+    bibkeys: batch.map(([isbn]) => `ISBN:${isbn}`).join(","),
+    jscmd: "viewapi",
+    callback: callbackName,
+  });
+  let settled = false;
+  const finish = (payload, successful) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timeoutId);
+    request.remove();
+    delete window[callbackName];
+    const googleBooks = payload?.books || {};
+    for (const [isbn, waiters] of batch) {
+      let match = Object.entries(googleBooks).find(([key, value]) => normalizeBookISBN(key) === isbn || normalizeBookISBN(value?.bib_key) === isbn)?.[1];
+      const result = match ? {
+        thumbnailUrl: googleBookURL(match.thumbnail_url),
+        infoUrl: googleBookURL(match.info_url),
+      } : null;
+      if (successful) googleBookCoverCache.set(isbn, result?.thumbnailUrl || result?.infoUrl ? result : null);
+      waiters.forEach((resolve) => resolve(successful ? result : null));
+    }
+    if (successful) persistGoogleBookCoverCache();
+  };
+  const timeoutId = setTimeout(() => finish(null, false), 9000);
+  window[callbackName] = (payload) => finish(payload, true);
+  request.onerror = () => finish(null, false);
+  request.src = `https://books.google.com/books?${params.toString()}`;
+  document.head.appendChild(request);
+}
+
+function requestGoogleBookCover(book) {
+  const isbn = normalizeBookISBN(book?.isbn);
+  if (!isbn || googleBookCoverCache.has(isbn)) return Promise.resolve(googleBookCoverCache.get(isbn) || null);
+  return new Promise((resolve) => {
+    const waiters = googleBookCoverPending.get(isbn) || [];
+    waiters.push(resolve);
+    googleBookCoverPending.set(isbn, waiters);
+    if (googleBookCoverFlushScheduled) return;
+    googleBookCoverFlushScheduled = true;
+    setTimeout(flushGoogleBookCoverQueue, 0);
+  });
+}
+
+async function loadGoogleBookCovers(books) {
+  const uniqueBooks = [...new Map(books.map((book) => [normalizeBookISBN(book?.isbn), book]).filter(([isbn]) => isbn)).values()];
+  const toLoad = uniqueBooks.filter((book) => !googleBookCoverCache.has(normalizeBookISBN(book.isbn)));
+  if (!toLoad.length) return false;
+  let updated = false;
+  for (let index = 0; index < toLoad.length; index += 20) {
+    const results = await Promise.all(toLoad.slice(index, index + 20).map(requestGoogleBookCover));
+    updated ||= results.some((cover) => Boolean(cover?.thumbnailUrl || cover?.infoUrl));
+  }
+  return updated;
+}
+
+function updateGoogleBooksLink(book) {
+  const link = $("#google-books-link");
+  if (!link) return;
+  const url = googleBooksInfoURLForBook(book);
+  link.href = url || "#";
+  link.hidden = !url;
+}
+
+function refreshOpenGoogleBooksLink() {
+  const dialog = $("#book-dialog");
+  if (!dialog?.open) return;
+  const book = data.books.find((item) => String(item.id) === String(dialog.dataset.bookId));
+  if (!book) return;
+  updateGoogleBooksLink(book);
+  const cover = $("#dialog-cover");
+  const imageMarkup = bookCoverImageMarkup(book, "dialog-cover-image");
+  if (cover && imageMarkup) {
+    cover.className = "dialog-cover dialog-cover-photo";
+    cover.innerHTML = imageMarkup;
+  }
+}
+
+function bookCoverImageMarkup(book, className) {
+  const googleCover = googleBookCoverForBook(book);
+  const localCover = localCoverArtworkForBook(book);
+  const source = googleCover?.thumbnailUrl || localCover;
+  if (!source) return "";
+  const googleAttribute = googleCover?.thumbnailUrl ? 'data-google-cover="true"' : "";
+  const fallbackAttribute = googleCover?.thumbnailUrl && localCover ? `data-fallback-cover="${escapeHTML(localCover)}"` : "";
+  return `<img class="${className}" src="${escapeHTML(source)}" alt="" loading="lazy" data-book-cover-image="true" ${googleAttribute} ${fallbackAttribute}>`;
+}
 const roleNames = { admin: "Administrador", student: "Estudiante" };
 const pageRole = document.body.dataset.role;
 const localDate = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Santiago" });
@@ -311,6 +451,16 @@ function attachRatingPicker(select) {
   group.append(stars, feedback);
   control.append(group);
 
+  let activePointerId = null;
+  let startingRating = null;
+  let dragChangedRating = false;
+  let suppressDragClick = false;
+  let ratingCommitted = false;
+  const setRating = (value) => {
+    ratingCommitted = true;
+    select.value = String(value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  };
   const buttons = [...select.options].map((option) => {
     const value = Number(option.value);
     const button = document.createElement("button");
@@ -319,10 +469,12 @@ function attachRatingPicker(select) {
     button.setAttribute("role", "radio");
     button.dataset.ratingValue = String(value);
     button.setAttribute("aria-label", option.textContent.trim());
-    button.addEventListener("click", () => {
-      select.value = String(value);
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-      updateRatingPicker(instance);
+    button.addEventListener("click", (event) => {
+      if (suppressDragClick && event.detail > 0) {
+        suppressDragClick = false;
+        return;
+      }
+      setRating(value);
     });
     stars.append(button);
     return button;
@@ -330,7 +482,7 @@ function attachRatingPicker(select) {
   const instance = { select, group, buttons, feedback };
   const updateRatingPicker = (preview = null) => {
     const selected = Number(select.value);
-    const shown = preview ?? selected;
+    const shown = Number(preview ?? selected);
     buttons.forEach((button) => {
       const value = Number(button.dataset.ratingValue);
       button.textContent = value <= shown ? "★" : "☆";
@@ -341,14 +493,43 @@ function attachRatingPicker(select) {
     });
     feedback.textContent = `${shown} ${shown === 1 ? "estrella" : "estrellas"}`;
   };
+  const updateFromPointer = (event) => {
+    if (event.pointerId !== activePointerId) return;
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-rating-value]");
+    if (!target || !group.contains(target)) return;
+    const value = Number(target.dataset.ratingValue);
+    if (value !== startingRating) dragChangedRating = true;
+    setRating(value);
+  };
+  const finishPointer = (event) => {
+    if (event.pointerId !== activePointerId) return;
+    if (event.type === "pointerup") updateFromPointer(event);
+    suppressDragClick = event.type === "pointerup" && dragChangedRating;
+    activePointerId = null;
+    document.removeEventListener("pointermove", updateFromPointer);
+    document.removeEventListener("pointerup", finishPointer);
+    document.removeEventListener("pointercancel", finishPointer);
+    if (suppressDragClick) window.setTimeout(() => { suppressDragClick = false; }, 80);
+  };
+  group.addEventListener("pointerdown", (event) => {
+    const button = event.target.closest("[data-rating-value]");
+    if (!button || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+    activePointerId = event.pointerId;
+    startingRating = Number(button.dataset.ratingValue);
+    dragChangedRating = false;
+    setRating(startingRating);
+    document.addEventListener("pointermove", updateFromPointer);
+    document.addEventListener("pointerup", finishPointer);
+    document.addEventListener("pointercancel", finishPointer);
+  });
   group.addEventListener("pointerover", (event) => {
     const button = event.target.closest("[data-rating-value]");
-    if (button) updateRatingPicker(Number(button.dataset.ratingValue));
+    if (button && !ratingCommitted) updateRatingPicker(Number(button.dataset.ratingValue));
   });
   group.addEventListener("pointerleave", () => updateRatingPicker());
   group.addEventListener("focusin", (event) => {
     const button = event.target.closest("[data-rating-value]");
-    if (button) updateRatingPicker(Number(button.dataset.ratingValue));
+    if (button && !ratingCommitted) updateRatingPicker(Number(button.dataset.ratingValue));
   });
   group.addEventListener("focusout", (event) => {
     if (!group.contains(event.relatedTarget)) updateRatingPicker();
@@ -494,6 +675,9 @@ let data = { user: null, books: [], reviews: [], requests: [], loans: [] };
 let auditEntries = [];
 let stateRequest = 0;
 let renderVersion = 0;
+let studentActivityMode = "history";
+let selectedSummaryPanel = "read";
+let studentPanelInitialized = false;
 let localApp;
 const NAV_ACTIVATION_OFFSET = 48;
 
@@ -516,11 +700,23 @@ function roleAllowsPage(role) {
 
 let sectionNavigationUpdate;
 function showPageError(message = "") {
-  if (message) toast(message, "error");
+  if (!message) return;
+  toast(message, "error");
+  const loader = $("#page-loading");
+  if (loader && !loader.hidden) {
+    loader.querySelector(".loading-layout").hidden = true;
+    const error = loader.querySelector(".loading-error");
+    error.textContent = message;
+    error.hidden = false;
+    loader.setAttribute("aria-busy", "false");
+  }
 }
 
 function clearRenderedData() {
   renderVersion += 1;
+  studentPanelInitialized = false;
+  selectedSummaryPanel = "read";
+  studentActivityMode = "history";
   auditEntries = [];
   closeDatePicker();
   closeSelectPicker();
@@ -535,6 +731,8 @@ function clearRenderedData() {
   document.querySelectorAll("#management-form, #inventory-body, #loans-body, #requests-body, #audit-body, #student-requests-body, #management-stats, #student-summary, #book-grid, #review-list, #student-review-list, #student-name, #review-book-filter")
     .forEach((region) => region.replaceChildren());
   if ($("#student-read-books")) $("#student-read-books").hidden = true;
+  if ($("#student-activity")) $("#student-activity").hidden = true;
+  if ($("#student-request-details")) $("#student-request-details").hidden = true;
   ["ticket-id", "ticket-student", "ticket-book", "ticket-loan-date", "ticket-due-date", "ticket-returned-at", "ticket-return-status", "ticket-comment"].forEach((id) => {
     const field = $(`#${id}`);
     if (field) field.textContent = "";
@@ -558,7 +756,7 @@ function clearRenderedData() {
   $("#management-form").onsubmit = null;
   const menuToggle = $(".menu-toggle");
   menuToggle.setAttribute("aria-expanded", "false");
-  menuToggle.setAttribute("aria-label", "Abrir menú");
+  menuToggle.setAttribute("aria-label", "Abrir menú de navegación");
   $("#main-nav").classList.remove("is-open");
 }
 
@@ -569,12 +767,14 @@ function renderPage() {
   $("#main-nav").hidden = !pageMatchesRole;
   $(".menu-toggle").hidden = !pageMatchesRole;
   document.querySelectorAll("#main-nav a").forEach((link) => { link.hidden = !pageMatchesRole; });
-  $("#app-main").hidden = !pageMatchesRole;
+  $("#app-main").hidden = false;
 
   if (!pageMatchesRole) {
     showPageError(user ? "El perfil configurado no coincide con esta página." : "No se pudo cargar el perfil configurado para esta página.");
     return;
   }
+  const pageLoading = $("#page-loading");
+  if (pageLoading) pageLoading.hidden = true;
 
   if ($("#student-dashboard")) {
     $("#student-dashboard").hidden = false;
@@ -653,12 +853,62 @@ function bookStats() {
   };
 }
 
+function animateStatValue(element, target) {
+  const previous = Number(element.textContent || 0);
+  element.dataset.value = String(target);
+  if (previous === target) {
+    element.textContent = target;
+    return;
+  }
+  const card = element.closest(".stat-card");
+  if (card) {
+    const direction = target > previous ? "is-increasing" : "is-decreasing";
+    card.classList.remove("is-updating", "is-increasing", "is-decreasing");
+    void card.offsetWidth;
+    card.classList.add("is-updating", direction);
+    window.clearTimeout(card.highlightTimer);
+    card.highlightTimer = window.setTimeout(() => card.classList.remove("is-updating", "is-increasing", "is-decreasing"), previous === 0 ? 2050 : 1350);
+  }
+  if (element.counterFrame) cancelAnimationFrame(element.counterFrame);
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const startedAt = performance.now() + (previous === 0 ? 180 : 0);
+  const duration = reducedMotion ? 1050 : previous === 0 ? 1650 : 1050;
+  const tick = (now) => {
+    const progress = Math.max(0, Math.min((now - startedAt) / duration, 1));
+    const eased = 1 - (1 - progress) ** 3;
+    element.textContent = Math.round(previous + (target - previous) * eased);
+    if (progress < 1) element.counterFrame = requestAnimationFrame(tick);
+    else element.counterFrame = null;
+  };
+  element.counterAnimation?.cancel();
+  if (!reducedMotion) {
+    element.counterAnimation = element.animate?.([
+      { opacity: .55, transform: "translateY(7px) scale(.86)" },
+      { opacity: 1, transform: "translateY(0) scale(1.05)", offset: .72 },
+      { opacity: 1, transform: "translateY(0) scale(1)" },
+    ], { duration: 700, easing: "cubic-bezier(.2,.8,.2,1)" });
+  }
+  element.counterFrame = requestAnimationFrame(tick);
+}
+
 function renderStats() {
   const stats = bookStats();
-  $("#management-stats").innerHTML = [
-    ["Títulos registrados", data.books.length, "Colección"], ["Ejemplares disponibles", stats.available, "En estantería"],
-    ["Ejemplares prestados", stats.borrowed, "En circulación"], ["Bajo stock", stats.low, "Una unidad disponible"], ["Sin disponibilidad", stats.out, "Agotados"],
-  ].map(([label, value, note]) => `<article class="stat-card"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+  const metrics = [
+    ["titles", "Títulos registrados", data.books.length, "Colección"],
+    ["available", "Ejemplares disponibles", stats.available, "En estantería"],
+    ["borrowed", "Ejemplares prestados", stats.borrowed, "En circulación"],
+    ["low", "Bajo stock", stats.low, "Una unidad disponible"],
+    ["out", "Sin disponibilidad", stats.out, "Agotados"],
+  ];
+  const container = $("#management-stats");
+  if (!container.querySelector("[data-stat-key]")) {
+    container.innerHTML = metrics.map(([key, label, , note]) => `<article class="stat-card" data-stat-key="${key}"><span>${label}</span><strong class="stat-value" data-value="0">0</strong><small>${note}</small></article>`).join("");
+  }
+  metrics.forEach(([key, , value]) => {
+    const card = container.querySelector(`[data-stat-key="${key}"]`);
+    const number = card?.querySelector(".stat-value");
+    if (number) animateStatValue(number, value);
+  });
 }
 
 function ratingSummary(bookId) {
@@ -666,11 +916,17 @@ function ratingSummary(bookId) {
   return { count: reviews.length, average: reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0 };
 }
 
-function renderBookReviews(bookId) {
-  const reviews = data.reviews
+function renderBookReviews(bookId, showAll = false) {
+  const allReviews = data.reviews
     .filter((review) => review.bookId === bookId)
-    .sort((a, b) => b.rating - a.rating || (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))
-    .slice(0, 3);
+    .sort((a, b) => b.rating - a.rating || (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt));
+  const reviews = showAll ? allReviews : allReviews.slice(0, 3);
+  const viewAllButton = $("#dialog-view-all-reviews");
+  if (viewAllButton) {
+    viewAllButton.dataset.bookId = bookId;
+    viewAllButton.hidden = showAll;
+    viewAllButton.disabled = allReviews.length === 0;
+  }
 
   $("#dialog-review-list").innerHTML = reviews.map((review) => `
     <article class="dialog-review-card">
@@ -748,6 +1004,7 @@ function renderCategoryFilters() {
 
 const BOOKS_PER_PAGE = 15;
 let catalogPage = 1;
+let selectedInventoryBookId = null;
 
 function updateBookPagination(containerSelector, statusSelector, currentPage, totalItems) {
   const pageCount = Math.max(1, Math.ceil(totalItems / BOOKS_PER_PAGE));
@@ -760,28 +1017,114 @@ function updateBookPagination(containerSelector, statusSelector, currentPage, to
   return { page, start: (page - 1) * BOOKS_PER_PAGE };
 }
 
+function renderMobileMyBooks() {
+  const section = $("#mobile-my-books");
+  const list = $("#mobile-my-books-list");
+  if (!section || !list) return [];
+  const requested = data.requests
+    .filter((item) => item.type === "loan" && (item.status === "Pendiente"
+      || (item.status === "Aprobada" && !data.loans.some((loan) => item.ticketId && loan.ticketId === item.ticketId))))
+    .map((item) => ({
+      book: data.books.find((book) => book.id === item.bookId),
+      title: item.bookTitle,
+      status: item.status === "Aprobada" ? "Listo para retirar" : "Solicitud pendiente",
+      date: item.dueDate || item.createdAt,
+      dateLabel: item.status === "Aprobada" ? "Próximo retiro" : "Solicitud enviada",
+      icon: item.status === "Aprobada" ? "✓" : "◷",
+    }));
+  const borrowed = data.loans
+    .filter((item) => item.status !== "Devuelto")
+    .map((item) => ({
+      book: data.books.find((book) => book.id === item.bookId),
+      title: item.bookTitle,
+      status: item.status === "Vencido" ? "Devolución pendiente" : "Préstamo activo",
+      date: item.dueDate || item.loanDate,
+      dateLabel: item.status === "Vencido" ? "Fecha de devolución" : "Próxima devolución",
+      icon: item.status === "Vencido" ? "!" : "↗",
+    }));
+  const items = [...requested, ...borrowed]
+    .filter((item) => item.title || item.book)
+    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")))
+    .slice(0, 2);
+  list.innerHTML = items.length ? items.map(({ book, title, status, date, dateLabel, icon }) => `
+    <article class="mobile-my-book-card${status === "Listo para retirar" ? " is-ready" : ""}">
+      <div class="mobile-my-book-copy">
+        <div class="mobile-my-book-status"><span aria-hidden="true">${icon}</span>${status}</div>
+        <h4>${escapeHTML(book?.title || title || "Libro")}</h4>
+        <p>${escapeHTML(book?.author || "Biblioteca escolar")}</p>
+        ${date ? `<small><strong>${escapeHTML(dateLabel)}</strong> · ${escapeHTML(formatDate(String(date).slice(0, 10)))}</small>` : ""}
+      </div>
+      ${book ? (bookCoverImageMarkup(book, "mobile-my-book-cover") || `<span class="mobile-my-book-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"></span>`) : ""}
+    </article>`).join("") : '<p class="mobile-my-books-empty">Aún no tienes préstamos activos. Encuentra tu próxima lectura.</p>';
+  section.hidden = false;
+  return items.map((item) => item.book).filter(Boolean);
+}
+
+function renderMobileBookShelves(books) {
+  const shelves = $("#mobile-book-shelves");
+  if (!shelves) return;
+  const readBookIds = new Set(getReadBooks().map((book) => book.id));
+  const mobileShelfGroups = [
+    ["Cuentos y leyendas", ["Cuentos y leyendas"]],
+    ["Narrativa y aventuras", ["Narrativa", "Misterio y fantasía"]],
+    ["Literatura Infantil", ["Literatura Infantil"]],
+    ["Divulgación", ["Divulgación"]],
+    ["Poesía", ["Poesía"]],
+    ["Teatro", ["Teatro"]],
+  ];
+  shelves.innerHTML = mobileShelfGroups.map(([label, categories]) => {
+    const booksInCategory = books.filter((book) => categories.includes(catalogFilterCategory(book)));
+    if (!booksInCategory.length) return "";
+    return `<section class="mobile-book-shelf" aria-label="${escapeHTML(label)}">
+      <div class="mobile-shelf-heading"><h3>${escapeHTML(label)}<small>${booksInCategory.length} ${booksInCategory.length === 1 ? "título" : "títulos"}</small></h3><div class="mobile-shelf-controls"><button type="button" data-shelf-scroll="-1" aria-label="Desplazar ${escapeHTML(label)} hacia la izquierda">‹</button><button type="button" data-shelf-scroll="1" aria-label="Desplazar ${escapeHTML(label)} hacia la derecha">›</button></div></div>
+      <div class="mobile-shelf-scroll">${booksInCategory.map((book) => {
+        const image = bookCoverImageMarkup(book, "mobile-shelf-cover");
+        const fallback = `<span class="mobile-shelf-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"><span class="cover-title">${escapeHTML(book.title)}</span></span>`;
+        const availability = book.available > 0 ? "Disponible" : "Lista de espera";
+        return `<button class="mobile-book-tile${readBookIds.has(book.id) ? " is-read" : ""}" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver ${escapeHTML(book.title)} de ${escapeHTML(book.author)}">
+          ${image || fallback}<strong>${escapeHTML(book.title)}</strong><span>${escapeHTML(book.author)}</span><small class="mobile-tile-availability${book.available > 0 ? " is-available" : " is-waiting"}">${availability}</small>
+        </button>`;
+      }).join("")}</div>
+    </section>`;
+  }).join("");
+}
+
 function renderCatalog(resetScroll = false) {
   const grid = $("#book-grid");
   if (!grid) return;
   const query = $("#book-search").value.trim().toLocaleLowerCase("es");
   const selected = $(".filter-chip.selected")?.dataset.category || "Todos";
+  const availableOnly = Boolean($("#available-only")?.checked);
   const readBookIds = new Set(getReadBooks().map((book) => book.id));
   const visible = data.books.filter((book) =>
     (selected === "Todos" || catalogFilterCategory(book) === selected)
+    && (!availableOnly || book.available > 0)
     && `${book.title} ${book.author} ${book.category} ${book.isbn}`.toLocaleLowerCase("es").includes(query)
   );
   if (resetScroll) catalogPage = 1;
   const pagination = updateBookPagination("#catalog-pagination", "#catalog-page-status", catalogPage, visible.length);
   catalogPage = pagination.page;
-  grid.innerHTML = visible.slice(pagination.start, pagination.start + BOOKS_PER_PAGE).map((book) => {
+  const pageBooks = visible.slice(pagination.start, pagination.start + BOOKS_PER_PAGE);
+  grid.innerHTML = pageBooks.map((book) => {
     const rating = ratingSummary(book.id);
     const isRead = readBookIds.has(book.id);
+    const coverImage = coverArtworkForBook(book);
+    const coverMarkup = bookCoverImageMarkup(book, "book-cover-image");
+    const availabilityClass = book.available > 0 ? "is-available" : "is-unavailable";
+    const availabilityLabel = book.available > 0 ? `${book.available} disponibles` : "Sin disponibilidad";
     return `<article class="book-card${isRead ? " is-read" : ""}">
       <div class="book-card-top"><span class="book-category">${escapeHTML(book.category)}</span>${isRead ? '<span class="read-badge"><span aria-hidden="true">✓</span> Leído</span>' : ""}</div>
-      <button class="book-cover cover-art ${escapeHTML(book.cover || "cover-1")}" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver detalles de ${escapeHTML(book.title)}"><span class="cover-title">${escapeHTML(book.title)}</span><span class="cover-author">${escapeHTML(book.author)}</span></button>
-      <div class="book-info"><div><h3>${escapeHTML(book.title)}</h3><p>${escapeHTML(book.author)} · ${book.available} disponibles</p><p class="catalog-rating">${rating.count ? `★ ${rating.average.toFixed(1)} (${rating.count} reseñas)` : "Sin valoraciones"}</p></div>
+      <button class="book-cover ${coverImage ? "book-cover-photo" : `cover-art ${escapeHTML(book.cover || "cover-1")}`}" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver detalles de ${escapeHTML(book.title)}">${coverImage ? coverMarkup : `<span class="cover-title">${escapeHTML(book.title)}</span><span class="cover-author">${escapeHTML(book.author)}</span>`}</button>
+      <div class="book-info"><div><h3>${escapeHTML(book.title)}</h3><p>${escapeHTML(book.author)}</p><p class="catalog-availability ${availabilityClass}"><span aria-hidden="true"></span>${availabilityLabel}</p><p class="catalog-rating">${rating.count ? `★ ${rating.average.toFixed(1)} (${rating.count} reseñas)` : "Sin valoraciones"}</p></div>
       <button class="book-arrow" type="button" data-book="${escapeHTML(book.id)}" aria-label="Más información de ${escapeHTML(book.title)}">↗</button></div></article>`;
   }).join("");
+  renderMobileBookShelves(pageBooks);
+  const myBooks = renderMobileMyBooks();
+  loadGoogleBookCovers([...pageBooks, ...myBooks]).then((updated) => {
+    if (!updated) return;
+    renderCatalog(false);
+    refreshOpenGoogleBooksLink();
+  });
   const scroll = $("#catalog-scroll");
   scroll.hidden = visible.length === 0;
   if (resetScroll) scroll.scrollTop = 0;
@@ -799,8 +1142,11 @@ function showBookDetails(id) {
   const book = data.books.find((item) => item.id === id);
   if (!book) return;
   const cover = $("#dialog-cover");
-  cover.className = `dialog-cover cover-art ${book.cover || "cover-1"}`;
-  cover.innerHTML = `<span class="cover-title">${escapeHTML(book.title)}</span><span class="cover-author">${escapeHTML(book.author)}</span>`;
+  const coverImage = coverArtworkForBook(book);
+  cover.className = `dialog-cover${coverImage ? " dialog-cover-photo" : ` cover-art ${book.cover || "cover-1"}`}`;
+  cover.innerHTML = coverImage ? bookCoverImageMarkup(book, "dialog-cover-image") : `<span class="cover-title">${escapeHTML(book.title)}</span><span class="cover-author">${escapeHTML(book.author)}</span>`;
+  $("#book-dialog").dataset.bookId = book.id;
+  updateGoogleBooksLink(book);
   $("#dialog-category").textContent = book.category;
   $("#dialog-title").textContent = book.title;
   $("#dialog-author").textContent = `Por ${book.author}`;
@@ -855,28 +1201,136 @@ function showBookDetails(id) {
   const dialog = $("#book-dialog");
   dialog.showModal();
   dialog.scrollTop = 0;
+  loadGoogleBookCovers([book]).then((updated) => {
+    if (updated) refreshOpenGoogleBooksLink();
+  });
 }
 
 let inventoryPage = 1;
+let selectedInventoryRequestId = null;
+let selectedInventoryLoanId = null;
+let inventoryDefaultSelectionApplied = false;
 
 function renderInventory(resetPage = false) {
   const query = $("#inventory-search").value.trim().toLocaleLowerCase("es");
   const filter = $("#inventory-filter").value;
   const books = data.books.filter((book) => {
     const availability = { available: book.available > 0, low: book.available === 1, out: book.available === 0, all: true };
-    return availability[filter] && `${book.title} ${book.author} ${book.isbn}`.toLocaleLowerCase("es").includes(query);
+    const [filterType, filterValue] = filter.includes(":") ? filter.split(/:(.*)/s).slice(0, 2) : ["all", "all"];
+    const matchesFilter = filterType === "status" ? Boolean(availability[filterValue])
+      : filterType === "theme" ? catalogFilterCategory(book) === filterValue
+        : true;
+    return matchesFilter && `${book.title} ${book.author} ${book.isbn} ${book.category}`.toLocaleLowerCase("es").includes(query);
   });
   if (resetPage) inventoryPage = 1;
   const pagination = updateBookPagination("#inventory-pagination", "#inventory-page-status", inventoryPage, books.length);
   inventoryPage = pagination.page;
-  $("#inventory-body").innerHTML = books.slice(pagination.start, pagination.start + BOOKS_PER_PAGE).map((book) => `<tr>
-    <td><strong>${escapeHTML(book.title)}</strong><small>${escapeHTML(book.author)}</small></td>
-    <td>${escapeHTML(book.isbn || "—")}</td><td>${book.total}</td>
-    <td><span class="stock-number ${book.available === 0 ? "danger" : book.available === 1 ? "warning" : ""}">${book.available}</span></td>
-    <td>${book.total - book.available}</td><td>${escapeHTML(book.condition || "—")}</td>
-    <td><div class="row-actions"><button type="button" data-edit-book="${escapeHTML(book.id)}">Editar</button><button type="button" class="danger-action" data-delete-book="${escapeHTML(book.id)}">Eliminar</button></div></td>
-    </tr>`).join("");
+  const visibleBooks = books.slice(pagination.start, pagination.start + BOOKS_PER_PAGE);
+  const totalCopies = books.reduce((sum, book) => sum + Number(book.total || 0), 0);
+  $("#inventory-count-summary").textContent = `${books.length} ${books.length === 1 ? "título" : "títulos"} · ${totalCopies} ${totalCopies === 1 ? "ejemplar" : "ejemplares"}`;
+  $("#inventory-body").innerHTML = visibleBooks.map((book) => {
+    const cover = bookCoverImageMarkup(book, "inventory-row-cover-image");
+    const fallback = `<span class="inventory-row-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"><span class="cover-title">${escapeHTML(book.title)}</span></span>`;
+    return `<tr tabindex="0" data-inventory-book="${escapeHTML(book.id)}" aria-selected="${book.id === selectedInventoryBookId}">
+      <td><div class="inventory-book-cell">${cover || fallback}<span class="inventory-book-copy"><strong>${escapeHTML(book.title)}</strong><small>${escapeHTML(book.author)}</small></span></div></td>
+      <td><span class="inventory-theme">${escapeHTML(primaryCategory(book.category) || "Colección")}</span></td>
+      <td class="inventory-total-cell">${book.total}</td>
+      <td><span class="stock-number ${book.available === 0 ? "danger" : book.available === 1 ? "warning" : ""}">${book.available}</span></td>
+      <td><div class="row-actions"><button type="button" data-edit-book="${escapeHTML(book.id)}">Ajustar</button><button type="button" class="danger-action inventory-delete-action" data-delete-book="${escapeHTML(book.id)}" aria-label="Eliminar ${escapeHTML(book.title)}">×</button></div></td>
+    </tr>`;
+  }).join("");
+  loadGoogleBookCovers(visibleBooks).then((updated) => {
+    if (updated) renderInventory();
+  });
   $("#inventory-empty").hidden = books.length > 0;
+  if (!inventoryDefaultSelectionApplied) {
+    const nextRequest = data.requests.find((request) => request.type === "loan" && request.status === "Pendiente" && visibleBooks.some((book) => String(book.id) === String(request.bookId)));
+    if (nextRequest) {
+      selectedInventoryBookId = nextRequest.bookId;
+      selectedInventoryRequestId = nextRequest.id;
+    } else {
+      const activeLoan = data.loans.find((loan) => loan.status !== "Devuelto" && visibleBooks.some((book) => String(book.id) === String(loan.bookId)));
+      selectedInventoryBookId = activeLoan?.bookId || visibleBooks[0]?.id || null;
+      selectedInventoryLoanId = activeLoan?.id || null;
+    }
+    inventoryDefaultSelectionApplied = true;
+  }
+  if (selectedInventoryBookId) {
+    const selectedBook = books.find(({ id }) => String(id) === String(selectedInventoryBookId));
+    if (selectedBook) showInventoryDetail(selectedBook);
+    else closeInventoryDetail();
+  }
+}
+
+function showInventoryDetail(book) {
+  if (!book) return closeInventoryDetail();
+  selectedInventoryBookId = book.id;
+  const detail = $("#inventory-detail");
+  const coverImage = coverArtworkForBook(book);
+  const coverClass = escapeHTML(book.cover || "cover-1");
+  const googleInfoURL = googleBooksInfoURLForBook(book);
+  const pendingRequests = data.requests.filter((request) => request.type === "loan" && request.status === "Pendiente" && String(request.bookId) === String(book.id));
+  const selectedRequest = pendingRequests.find((request) => String(request.id) === String(selectedInventoryRequestId)) || pendingRequests[0] || null;
+  selectedInventoryRequestId = selectedRequest?.id || null;
+  const activeLoans = data.loans.filter((loan) => loan.status !== "Devuelto" && String(loan.bookId) === String(book.id));
+  const selectedLoan = activeLoans.find((loan) => String(loan.id) === String(selectedInventoryLoanId)) || activeLoans[0] || null;
+  selectedInventoryLoanId = selectedLoan?.id || null;
+  const requestOptions = pendingRequests.map((request) => `<option value="${escapeHTML(request.id)}"${String(request.id) === String(selectedRequest?.id) ? " selected" : ""}>${escapeHTML(request.student || "Estudiante")} · Por preparar</option>`).join("");
+  const requestPanel = selectedRequest ? `
+    <label class="inventory-request-label" for="inventory-request-select">Movimiento del título</label>
+    <select class="inventory-request-select" id="inventory-request-select" aria-label="Seleccionar solicitud de retiro">${requestOptions}</select>
+    <dl class="inventory-detail-stats inventory-request-stats">
+      <div><dt>Solicitante</dt><dd>${escapeHTML(selectedRequest.student || "Estudiante")}</dd></div>
+      <div><dt>Fecha de solicitud</dt><dd>${escapeHTML(formatDate(selectedRequest.createdAt))}</dd></div>
+      <div><dt>Ejemplares disponibles</dt><dd>${book.available} <span>de ${book.total}</span></dd></div>
+    </dl>
+    <div class="inventory-detail-actions">
+      <button class="action-button inventory-ready-button" type="button" data-approve-request="${escapeHTML(selectedRequest.id)}"${book.available < 1 ? " disabled" : ""}>✓ <span>Marcar listo para retirar</span></button>
+      <button class="secondary-button inventory-detail-edit" type="button" data-edit-book="${escapeHTML(book.id)}">Ajustar inventario</button>
+    </div>` : `
+    <dl class="inventory-detail-stats">
+      <div><dt>Ejemplares disponibles</dt><dd>${book.available} <span>de ${book.total}</span></dd></div>
+      <div><dt>En circulación</dt><dd>${Math.max(0, book.total - book.available)}</dd></div>
+      <div><dt>Estado físico</dt><dd>${escapeHTML(book.condition || "Sin registrar")}</dd></div>
+      <div><dt>ISBN</dt><dd>${escapeHTML(book.isbn || "Sin registrar")}</dd></div>
+    </dl>
+    <button class="action-button inventory-detail-edit" type="button" data-edit-book="${escapeHTML(book.id)}">Ajustar inventario</button>`;
+  const activeLoanPanel = selectedLoan ? `
+    <dl class="inventory-detail-stats inventory-request-stats">
+      <div><dt>Solicitante</dt><dd>${escapeHTML(selectedLoan.student || "Estudiante")}</dd></div>
+      <div><dt>Fecha del préstamo</dt><dd>${escapeHTML(formatDate(selectedLoan.loanDate))}</dd></div>
+      <div><dt>Fecha de devolución</dt><dd>${escapeHTML(formatDate(selectedLoan.dueDate))}</dd></div>
+      <div><dt>Ejemplares disponibles</dt><dd>${book.available} <span>de ${book.total}</span></dd></div>
+    </dl>
+    <div class="inventory-detail-actions">
+      <button class="action-button inventory-return-button" type="button" data-return-loan="${escapeHTML(selectedLoan.id)}">↩ <span>Registrar devolución</span></button>
+      <button class="secondary-button inventory-detail-edit" type="button" data-edit-book="${escapeHTML(book.id)}">Ajustar inventario</button>
+    </div>` : null;
+  $("#inventory-detail-content").innerHTML = `
+    ${selectedRequest ? '<h3 class="inventory-request-title">Preparar retiro</h3>' : selectedLoan ? '<h3 class="inventory-request-title">Préstamo activo</h3>' : ""}
+    <div class="inventory-detail-top">
+      <div class="inventory-detail-cover ${coverImage ? "inventory-detail-cover-photo" : `cover-art ${coverClass}`}" aria-hidden="true">${coverImage ? bookCoverImageMarkup(book, "inventory-detail-cover-image") : `<span class="cover-title">${escapeHTML(book.title)}</span>`}</div>
+      <div class="inventory-detail-heading">${selectedRequest ? '<span class="inventory-request-state"><span class="inventory-request-dot"></span>Por preparar</span>' : selectedLoan ? '<span class="inventory-request-state is-loan"><span class="inventory-request-dot"></span>En circulación</span>' : `<span class="inventory-detail-kicker">${escapeHTML(book.category || "Colección")}</span>`}<h4>${escapeHTML(book.title)}</h4><p>${escapeHTML(book.author)}</p>${(selectedRequest || selectedLoan) && googleInfoURL ? `<a class="google-books-link" href="${escapeHTML(googleInfoURL)}" target="_blank" rel="noopener noreferrer">Ver ficha en Google Books <span aria-hidden="true">↗</span></a>` : ""}</div>
+    </div>
+    ${selectedRequest ? requestPanel : selectedLoan ? activeLoanPanel : `<span class="inventory-detail-kicker inventory-detail-section-title">Ficha del libro</span>${requestPanel}`}`;
+  detail.hidden = false;
+  $("#inventory-body").querySelectorAll("[data-inventory-book]").forEach((row) => {
+    const selected = row.dataset.inventoryBook === String(book.id);
+    row.classList.toggle("fila-elegida", selected);
+    row.setAttribute("aria-selected", String(selected));
+  });
+}
+
+function closeInventoryDetail() {
+  selectedInventoryBookId = null;
+  selectedInventoryRequestId = null;
+  selectedInventoryLoanId = null;
+  const detail = $("#inventory-detail");
+  if (detail) detail.hidden = true;
+  $("#inventory-body")?.querySelectorAll("[data-inventory-book]").forEach((row) => {
+    row.classList.remove("fila-elegida");
+    row.setAttribute("aria-selected", "false");
+  });
 }
 
 function statusPill(status) {
@@ -1009,29 +1463,57 @@ function renderRequests() {
 function renderStudentPanel() {
   const { loans, requests } = data;
   const readBooks = getReadBooks();
+  if (!studentPanelInitialized) {
+    selectedSummaryPanel = "read";
+    $("#student-read-books").hidden = false;
+    studentPanelInitialized = true;
+  }
+  const pendingLoans = requests.filter((request) => request.type === "loan" && request.status === "Pendiente").length;
+  const activityOpen = !$("#student-request-details").hidden;
+  const readBooksOpen = !$("#student-read-books").hidden;
+  const activeLoans = loans.filter((loan) => loan.status !== "Devuelto").length;
   $("#student-summary").innerHTML = [
-    ["Préstamos activos", loans.filter((loan) => loan.status !== "Devuelto").length, "Libros en tu poder"],
-    ["Peticiones pendientes", requests.filter((request) => request.status === "Pendiente").length, "En revisión"],
-    ["Historial", loans.length, "Préstamos registrados"],
-  ].map(([label, count, note]) => `<article class="stat-card"><span>${label}</span><strong>${count}</strong><small>${note}</small></article>`).join("")
-    + `<button class="stat-card stat-card-button" id="student-read-books-toggle" type="button" aria-controls="student-read-books" aria-expanded="false"><span>Libros leídos</span><strong>${readBooks.length}</strong><small>Ver y volver a pedir</small></button>`;
+    ["Préstamos activos", activeLoans, "Ver préstamos activos", "active"],
+    ["Préstamos pendientes", pendingLoans, "Ver solicitudes pendientes", "pending"],
+    ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
+    ["Historial", loans.length + requests.length, "Ver todos los movimientos", "history"],
+  ].map(([label, count, note, key]) => key === "read"
+    ? `<button class="stat-card stat-card-button" id="student-read-books-toggle" type="button" aria-controls="student-read-books" aria-expanded="${readBooksOpen}" aria-pressed="${selectedSummaryPanel === "read"}"><span>${label}</span><strong>${count}</strong><small>${note}</small></button>`
+    : `<button class="stat-card stat-card-button" type="button" data-activity-mode="${key}" aria-controls="student-request-details" aria-expanded="${activityOpen && selectedSummaryPanel === key}" aria-pressed="${selectedSummaryPanel === key}"><span>${label}</span><strong>${count}</strong><small>${note}</small></button>`).join("");
 
   $("#student-read-list").innerHTML = readBooks.map((book) => `
     <article class="student-read-card">
-      <div><span class="read-badge">Leído</span><h4>${escapeHTML(book.title)}</h4><p>${escapeHTML(book.author || "Autor no disponible")}</p></div>
-      ${book.available === null
-        ? '<small>Ya no está en el catálogo</small>'
-        : `<button class="secondary-button" type="button" data-rerequest-book="${escapeHTML(book.id)}"${book.available < 1 ? " disabled" : ""}>${book.available > 0 ? "Volver a pedir" : "Sin ejemplares disponibles"}</button>`}
+      ${coverArtworkForBook(book) ? bookCoverImageMarkup(book, "student-read-cover") : `<span class="student-read-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"></span>`}
+      <div class="student-read-copy"><span class="read-badge">Leído</span><h4>${escapeHTML(book.title)}</h4><p>${escapeHTML(book.author || "Autor no disponible")}</p></div>
+      <div class="student-read-actions">
+        ${data.books.some((item) => item.id === book.id) ? `<button class="secondary-button" type="button" data-show-book-reviews="${escapeHTML(book.id)}">Ver reseñas</button><button class="action-button" type="button" data-write-review="${escapeHTML(book.id)}">Escribir reseña</button>` : '<small>Ya no está en el catálogo</small>'}
+        ${book.available === null ? "" : `<button class="secondary-button rerequest-book-button" type="button" data-rerequest-book="${escapeHTML(book.id)}"${book.available < 1 ? " disabled" : ""}>${book.available > 0 ? 'Volver a pedir <span aria-hidden="true">→</span>' : "Sin ejemplares disponibles"}</button>`}
+      </div>
     </article>
   `).join("");
+  loadGoogleBookCovers(readBooks).then((updated) => {
+    if (updated) renderStudentPanel();
+  });
   $("#student-read-books-empty").hidden = readBooks.length > 0;
 
   const rows = [
-    ...requests.map((item) => ({ item, when: item.createdAt, dueDate: item.dueDate, ticketId: item.ticketId, ticketRequested: item.ticketRequested, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
-    ...loans.map((item) => ({ item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, returnTicketId: item.returnTicketId, returnedAt: item.returnedAt, label: "Préstamo" })),
+    ...requests.map((item) => ({ kind: "request", item, when: item.createdAt, dueDate: item.dueDate, ticketId: item.ticketId, ticketRequested: item.ticketRequested, label: item.type === "loan" ? "Solicitud de préstamo" : "Solicitud de devolución" })),
+    ...loans.map((item) => ({ kind: "loan", item, when: item.loanDate, dueDate: item.dueDate, ticketId: item.ticketId, returnTicketId: item.returnTicketId, returnedAt: item.returnedAt, label: "Préstamo" })),
   ];
   rows.sort((a, b) => b.when.localeCompare(a.when));
-  $("#student-requests-body").innerHTML = rows.map(({ item, dueDate, ticketId, returnTicketId, returnedAt, ticketRequested, label }) => {
+  const visibleRows = rows.filter(({ kind, item }) => studentActivityMode === "active"
+    ? kind === "loan" && item.status !== "Devuelto"
+    : studentActivityMode === "pending"
+      ? kind === "request" && item.type === "loan" && item.status === "Pendiente"
+      : true);
+  const activityTable = $("#student-requests-body").closest("table");
+  activityTable.classList.remove("is-active-mode", "is-pending-mode", "is-history-mode");
+  activityTable.classList.add(`is-${studentActivityMode}-mode`);
+  $("#student-requests-count").textContent = visibleRows.length;
+  const activityTitle = $("#student-requests-title");
+  if (activityTitle) activityTitle.textContent = studentActivityMode === "active" ? "Préstamos activos"
+    : studentActivityMode === "pending" ? "Préstamos pendientes" : "Tu actividad";
+  $("#student-requests-body").innerHTML = visibleRows.map(({ item, dueDate, ticketId, returnTicketId, returnedAt, ticketRequested, label }) => {
     const book = data.books.find((entry) => entry.id === item.bookId);
     const returnTicketLoan = item.type === "return" && ticketId
       ? data.loans.find((loan) => loan.returnTicketId === ticketId)
@@ -1052,7 +1534,27 @@ function renderStudentPanel() {
     const readBadge = item.type !== "return" && item.status === "Devuelto" ? '<span class="read-badge">Leído</span>' : "";
     return `<tr><td><strong>${escapeHTML(book?.title || item.bookTitle || "Libro eliminado")}</strong>${readBadge}</td><td>${label}</td><td>${formatDate(item.createdAt || item.loanDate)}</td><td>${formatDate(dueDate)}${returnDate}</td><td>${ticket}</td><td>${statusPill(item.status)}</td></tr>`;
   }).join("");
-  $("#student-requests-empty").hidden = rows.length > 0;
+  $("#student-requests-empty").textContent = studentActivityMode === "active" ? "No tienes préstamos activos."
+    : studentActivityMode === "pending" ? "No tienes préstamos pendientes." : "Aún no tienes solicitudes ni préstamos registrados.";
+  $("#student-requests-empty").hidden = visibleRows.length > 0;
+}
+
+function setStudentActivityExpanded(expanded, scrollToActivity = false) {
+  const details = $("#student-request-details");
+  const section = $("#student-activity");
+  if (!details) return;
+  details.hidden = !expanded;
+  if (section) section.hidden = !expanded;
+  document.querySelectorAll("[data-activity-mode]").forEach((button) => {
+    const selected = button.dataset.activityMode === selectedSummaryPanel;
+    button.setAttribute("aria-expanded", String(expanded && selected));
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  const readBooksButton = $("#student-read-books-toggle");
+  const readBooksSection = $("#student-read-books");
+  readBooksButton?.setAttribute("aria-expanded", String(Boolean(readBooksSection && !readBooksSection.hidden)));
+  readBooksButton?.setAttribute("aria-pressed", String(selectedSummaryPanel === "read"));
+  if (scrollToActivity && expanded) $("#student-activity")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function getReadBooks() {
@@ -1107,6 +1609,10 @@ function renderReviews() {
   const empty = reviewControl("reviews-empty");
   empty.hidden = reviews.length > 0;
   empty.textContent = bookFilter === "all" ? "Aún no hay reseñas publicadas." : "No hay reseñas para el libro seleccionado.";
+  const reviewTools = reviewControl("review-tools");
+  if (reviewTools) reviewTools.hidden = data.reviews.length === 0;
+  const seeReviews = $("#student-see-reviews");
+  if (seeReviews) seeReviews.hidden = data.reviews.length === 0;
   reviewControl("review-reset").disabled = bookFilter === "all" && sort === "newest";
 }
 
@@ -1332,7 +1838,7 @@ function addLoan() {
   }, "Préstamo registrado y stock actualizado."));
 }
 
-function addReview(review) {
+function addReview(review, selectedBookId) {
   const eligibleBookIds = new Set([
     ...data.requests.filter((request) => request.type === "loan").map((request) => request.bookId),
     ...data.loans.map((loan) => loan.bookId),
@@ -1348,7 +1854,7 @@ function addReview(review) {
     return;
   }
   openForm(review ? "Editar reseña" : "Publicar reseña", [
-    { name: "bookId", label: "Libro", type: "select", value: review?.bookId || options[0][0], options },
+    { name: "bookId", label: "Libro", type: "select", value: review?.bookId || selectedBookId || options[0][0], options },
     { name: "rating", label: "Calificación", type: "rating", value: review?.rating || 5, options: [[1, "1 estrella"], [2, "2 estrellas"], [3, "3 estrellas"], [4, "4 estrellas"], [5, "5 estrellas"]] },
     { name: "comment", label: "Comentario", type: "textarea", value: review?.comment, maxlength: 600 },
   ], (values) => {
@@ -1358,6 +1864,15 @@ function addReview(review) {
 }
 
 function bindUI() {
+  document.addEventListener("error", (event) => {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement) || image.dataset.bookCoverImage !== "true") return;
+    const fallback = image.dataset.fallbackCover;
+    delete image.dataset.googleCover;
+    delete image.dataset.fallbackCover;
+    if (fallback && image.getAttribute("src") !== fallback) image.src = fallback;
+    else image.hidden = true;
+  }, true);
   document.querySelectorAll("select").forEach(attachCustomSelect);
   document.querySelectorAll(".filter-chip").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.classList.contains("selected")));
@@ -1392,7 +1907,22 @@ function bindUI() {
     const button = event.target.closest("[data-book]");
     if (button) showBookDetails(button.dataset.book);
   });
+  $("#mobile-book-shelves")?.addEventListener("click", (event) => {
+    const scrollButton = event.target.closest("[data-shelf-scroll]");
+    if (scrollButton) {
+      const shelf = scrollButton.closest(".mobile-book-shelf")?.querySelector(".mobile-shelf-scroll");
+      shelf?.scrollBy({ left: Number(scrollButton.dataset.shelfScroll) * 140, behavior: "smooth" });
+      return;
+    }
+    const button = event.target.closest("[data-book]");
+    if (button) showBookDetails(button.dataset.book);
+  });
+  $("#available-only")?.addEventListener("change", () => renderCatalog(true));
   $("#book-dialog .dialog-close")?.addEventListener("click", () => $("#book-dialog").close());
+  $("#dialog-view-all-reviews")?.addEventListener("click", (event) => {
+    const button = event.currentTarget;
+    if (button.dataset.bookId) renderBookReviews(button.dataset.bookId, true);
+  });
   $(".management-tabs")?.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-panel]");
     if (tab) activateTab(tab.dataset.panel);
@@ -1402,13 +1932,55 @@ function bindUI() {
   $("#inventory-body")?.addEventListener("click", (event) => {
     const edit = event.target.closest("[data-edit-book]");
     const remove = event.target.closest("[data-delete-book]");
-    const book = data.books.find(({ id }) => id === (edit?.dataset.editBook || remove?.dataset.deleteBook));
-    if (!book) return;
-    if (edit) addOrEditBook(book);
-    if (remove) {
-      confirmBookDeletion(book);
+    if (edit || remove) {
+      const book = data.books.find(({ id }) => String(id) === (edit?.dataset.editBook || remove?.dataset.deleteBook));
+      if (!book) return;
+      if (edit) addOrEditBook(book);
+      if (remove) confirmBookDeletion(book);
+      return;
     }
+    const row = event.target.closest("[data-inventory-book]");
+    const book = data.books.find(({ id }) => String(id) === row?.dataset.inventoryBook);
+    if (book) showInventoryDetail(book);
   });
+  $("#inventory-body")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const row = event.target.closest("[data-inventory-book]");
+    if (!row || event.target !== row) return;
+    event.preventDefault();
+    const book = data.books.find(({ id }) => String(id) === row.dataset.inventoryBook);
+    if (book) showInventoryDetail(book);
+  });
+  $("#inventory-detail")?.addEventListener("click", (event) => {
+    const returnButton = event.target.closest("[data-return-loan]");
+    if (returnButton) {
+      if (confirm("¿Confirmar la devolución de este ejemplar?")) {
+        runAction(returnButton, async () => {
+          const result = await mutate(`/loans/${encodeURIComponent(returnButton.dataset.returnLoan)}/return`, "POST", undefined, "Devolución registrada. Inventario actualizado.");
+          if (result?.returnTicketId) showReturnTicket(result.id);
+        });
+      }
+      return;
+    }
+    const approve = event.target.closest("[data-approve-request]");
+    if (approve) {
+      const requestId = approve.dataset.approveRequest;
+      runAction(approve, () => mutate(`/requests/${encodeURIComponent(requestId)}`, "PATCH", { approve: true }, "Préstamo aprobado y listo para retirar."));
+      return;
+    }
+    const edit = event.target.closest("[data-edit-book]");
+    if (!edit) return;
+    const book = data.books.find(({ id }) => String(id) === edit.dataset.editBook);
+    if (book) addOrEditBook(book);
+  });
+  $("#inventory-detail")?.addEventListener("change", (event) => {
+    const select = event.target.closest("#inventory-request-select");
+    if (!select) return;
+    selectedInventoryRequestId = select.value;
+    const book = data.books.find(({ id }) => String(id) === String(selectedInventoryBookId));
+    if (book) showInventoryDetail(book);
+  });
+  $("#inventory-detail-close")?.addEventListener("click", closeInventoryDetail);
   $("#inventory-search")?.addEventListener("input", () => renderInventory(true));
   $("#inventory-filter")?.addEventListener("change", () => renderInventory(true));
   $("#inventory-pagination")?.addEventListener("click", (event) => {
@@ -1459,13 +2031,41 @@ function bindUI() {
     if (returnTicketButton) showReturnTicket(returnTicketButton.dataset.viewReturnTicket);
   });
   $("#student-summary")?.addEventListener("click", (event) => {
-    const button = event.target.closest("#student-read-books-toggle");
-    if (!button) return;
-    const section = $("#student-read-books");
-    section.hidden = !section.hidden;
-    button.setAttribute("aria-expanded", String(!section.hidden));
+    const readBooksButton = event.target.closest("#student-read-books-toggle");
+    if (readBooksButton) {
+      const section = $("#student-read-books");
+      const closeReadBooks = selectedSummaryPanel === "read" && !section.hidden;
+      selectedSummaryPanel = "read";
+      section.hidden = closeReadBooks;
+      setStudentActivityExpanded(false);
+      if (!closeReadBooks) section.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      return;
+    }
+    const activityCard = event.target.closest("[data-activity-mode]");
+    if (!activityCard) return;
+    const nextMode = activityCard.dataset.activityMode;
+    const shouldClose = selectedSummaryPanel === nextMode && !$("#student-request-details").hidden;
+    selectedSummaryPanel = nextMode;
+    if (shouldClose) {
+      setStudentActivityExpanded(false);
+      return;
+    }
+    studentActivityMode = nextMode;
+    $("#student-read-books").hidden = true;
+    renderStudentPanel();
+    setStudentActivityExpanded(true, true);
   });
   $("#student-read-list")?.addEventListener("click", (event) => {
+    const writeReviewButton = event.target.closest("[data-write-review]");
+    if (writeReviewButton) {
+      addReview(undefined, writeReviewButton.dataset.writeReview);
+      return;
+    }
+    const seeReviewsButton = event.target.closest("[data-show-book-reviews]");
+    if (seeReviewsButton) {
+      showBookDetails(seeReviewsButton.dataset.showBookReviews);
+      return;
+    }
     const button = event.target.closest("[data-rerequest-book]");
     if (button) showBookDetails(button.dataset.rerequestBook);
   });
@@ -1485,7 +2085,12 @@ function bindUI() {
     if (button) showLoanTicket(button.dataset.viewTicket);
   });
 
-  $(`#${reviewPrefix}add-review`).addEventListener("click", () => addReview());
+  $(`#${reviewPrefix}add-review`)?.addEventListener("click", () => addReview());
+  if (pageRole === "student") {
+    $("#student-see-reviews")?.addEventListener("click", () => {
+      $("#student-review-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
   const bookFilter = reviewControl("review-book-filter");
   bookFilter?.addEventListener("change", renderReviews);
   reviewControl("review-sort").addEventListener("change", renderReviews);
@@ -1524,9 +2129,10 @@ function setupSectionNavigation() {
     window.removeEventListener("popstate", sectionNavigationUpdate);
   }
   const links = [...document.querySelectorAll(".main-nav .nav-link[href^='#']:not([hidden])")];
+  const mobileStudentLinks = [...document.querySelectorAll(".student-bottom-nav .nav-link[href^='#']")];
 
   const setActive = (id) => {
-    links.forEach((link) => {
+    [...links, ...mobileStudentLinks].forEach((link) => {
       const active = link.getAttribute("href") === `#${id}`;
       link.classList.toggle("active", active);
       if (active) link.setAttribute("aria-current", "location");
@@ -1585,7 +2191,7 @@ function setupPage() {
   const mainNav = $("#main-nav");
   function showMenu(open) {
     menuToggle.setAttribute("aria-expanded", String(open));
-    menuToggle.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+    menuToggle.setAttribute("aria-label", open ? "Cerrar menú de navegación" : "Abrir menú de navegación");
     mainNav.classList.toggle("is-open", open);
   }
   menuToggle.addEventListener("click", () => showMenu(menuToggle.getAttribute("aria-expanded") !== "true"));

@@ -7,13 +7,14 @@
       name="description"
       content="Biblioteca Escolar José Miguel Carrera: descubre lecturas, recursos y novedades para toda nuestra comunidad."
     />
-    <meta name="theme-color" content="#f7f6f0" />
+    <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-student") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Estudiantes | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=dark-mode-9" />
+    <link rel="stylesheet" href="styles.css?v=night-blue-1" />
+    <link rel="stylesheet" href="design-overrides.css?v=mobile-shelves-admin-4" />
     <script src="data.js" defer></script>
     <script src="local.js?v=return-ticket-migration-1" defer></script>
-    <script src="script.js?v=dark-mode-10" defer></script>
+    <script src="script.js?v=admin-detail-request-4" defer></script>
   </head>
   <body data-role="student">
     <header class="site-header">
@@ -28,23 +29,32 @@
       </a>
 
       <div class="header-controls">
-        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menú">
-        <span></span><span></span>
-      </button>
         <button class="theme-toggle" type="button" aria-label="Activar modo nocturno" aria-pressed="false"><span class="theme-toggle-icon" aria-hidden="true">☾</span><span class="theme-toggle-label">Modo nocturno</span></button>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menú de navegación">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9.25"/><circle cx="12" cy="9" r="2.75"/><path d="M6.8 18c.75-2.35 2.4-3.55 5.2-3.55s4.45 1.2 5.2 3.55"/></svg>
+        </button>
       </div>
       <nav class="main-nav" id="main-nav" aria-label="Navegación principal">
         <a class="nav-link active" href="#biblioteca" data-student-page>Biblioteca</a>
         <a class="nav-link" href="#panel-estudiante" data-student-page>Panel de estudiante</a>
       </nav>
     </header>
-    <main id="app-main" hidden>
+    <main id="app-main">
+      <div class="page-loading student-loading" id="page-loading" role="status" aria-label="Cargando biblioteca" aria-busy="true">
+        <div class="loading-error" hidden></div>
+        <div class="loading-layout" aria-hidden="true">
+          <div class="loading-heading"><i></i><i></i></div>
+          <div class="loading-search"></div>
+          <div class="loading-chips"><i></i><i></i><i></i></div>
+          <div class="loading-book-grid"><div><i></i><b></b><em></em><small></small></div><div><i></i><b></b><em></em><small></small></div><div><i></i><b></b><em></em><small></small></div><div><i></i><b></b><em></em><small></small></div></div>
+        </div>
+      </div>
       <section class="student-subpage" id="biblioteca" aria-label="Biblioteca" hidden>
       <section class="catalog-section section-wrap" id="catalogo">
         <div class="section-heading">
           <div>
             <div class="eyebrow"><span class="eyebrow-dot"></span> Para curiosos y soñadores</div>
-            <h2>Un libro para <em>cada aventura.</em></h2>
+            <h2><span class="catalog-heading-desktop">Un libro para <em>cada aventura.</em></span><span class="catalog-heading-mobile">Catálogo de libros</span></h2>
           </div>
           <p>Recomendaciones para descubrir mundos nuevos, aprender algo distinto y disfrutar leyendo.</p>
         </div>
@@ -61,7 +71,15 @@
             <input id="book-search" type="search" placeholder="Buscar un libro..." autocomplete="off" />
             <span class="search-shortcut" aria-hidden="true">⌕</span>
           </label>
+          <label class="available-only-control"><input id="available-only" type="checkbox"><span>Solo disponibles</span></label>
         </div>
+
+        <section class="mobile-my-books" id="mobile-my-books" aria-labelledby="mobile-my-books-title" hidden>
+          <div class="mobile-shelf-heading"><h3 id="mobile-my-books-title">Mis libros</h3><a href="#panel-estudiante" data-student-page>Ver todos <span aria-hidden="true">›</span></a></div>
+          <div class="mobile-my-books-list" id="mobile-my-books-list"></div>
+        </section>
+
+        <div class="mobile-book-shelves" id="mobile-book-shelves" aria-label="Libros por categoría"></div>
 
         <div class="catalog-scroll" id="catalog-scroll" tabindex="0" role="region" aria-label="Listado de libros">
           <div class="book-grid" id="book-grid" aria-live="polite"></div>
@@ -96,19 +114,26 @@
           <div class="student-read-list" id="student-read-list"></div>
           <p class="module-empty" id="student-read-books-empty" hidden>Aún no tienes libros leídos registrados.</p>
         </section>
-        <div class="student-request-area">
-          <div><h3>Mis préstamos y solicitudes</h3><p>Los préstamos quedan sujetos a la aprobación de biblioteca.</p></div>
+        <section class="student-request-area" id="student-activity" aria-labelledby="student-requests-title" hidden>
+          <div class="student-requests-heading">
+            <h3 id="student-requests-title">Tu actividad</h3>
+            <span class="activity-count" id="student-requests-count">0</span>
+          </div>
+          <div class="student-request-details" id="student-request-details" hidden>
           <div class="table-scroll" tabindex="0" role="region" aria-label="Mis préstamos y solicitudes">
             <table><thead><tr><th>Libro</th><th>Tipo</th><th>Fecha</th><th>Devolución</th><th>Ticket</th><th>Estado</th></tr></thead><tbody id="student-requests-body"></tbody></table>
           </div>
           <p class="module-empty" id="student-requests-empty">Aún no tienes solicitudes ni préstamos registrados.</p>
-        </div>
-        <section class="student-review-area" aria-labelledby="student-reviews-title">
-          <div class="panel-toolbar">
-            <div><h3 id="student-reviews-title">Opiniones de la comunidad</h3><p>Comparte tu experiencia y consulta las reseñas de otros lectores.</p></div>
-            <button class="action-button" id="student-add-review" type="button">＋ Escribir reseña</button>
           </div>
-          <div class="table-tools review-tools" role="group" aria-label="Filtros de opiniones">
+        </section>
+        <section class="student-review-area" id="student-opinions" aria-labelledby="student-reviews-title">
+          <div class="panel-toolbar">
+            <div><h3 id="student-reviews-title">Reseñas generales</h3></div>
+            <div class="student-review-actions">
+              <button class="review-see-button" id="student-see-reviews" type="button">Ver reseñas generales <span aria-hidden="true">↓</span></button>
+            </div>
+          </div>
+          <div class="table-tools review-tools" id="student-review-tools" role="group" aria-label="Filtros de opiniones">
             <select id="student-review-sort" aria-label="Ordenar reseñas">
               <option value="newest">Más recientes</option>
               <option value="highest">Mejor valoradas</option>
@@ -124,6 +149,17 @@
 
     </main>
 
+    <nav class="student-bottom-nav" aria-label="Accesos rápidos de biblioteca">
+      <a class="nav-link active" href="#biblioteca" data-student-page aria-current="location">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 10.5 12 3.8l8.5 6.7v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M9 20.5v-6h6v6"/></svg>
+        <span>Catálogo</span>
+      </a>
+      <a class="nav-link" href="#panel-estudiante" data-student-page>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3.8h12v17l-6-3.8-6 3.8z"/><path d="M9 8h6M9 11.5h6"/></svg>
+        <span>Mis libros</span>
+      </a>
+    </nav>
+
     <dialog class="book-dialog" id="book-dialog" aria-labelledby="dialog-title">
       <button class="dialog-close" type="button" aria-label="Cerrar">×</button>
       <div class="dialog-cover" id="dialog-cover"></div>
@@ -133,6 +169,7 @@
         <p class="dialog-author" id="dialog-author"></p>
         <p id="dialog-description"></p>
         <div class="dialog-meta" id="dialog-meta"></div>
+        <a class="google-books-link" id="google-books-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Ver portada y ficha en Google Books <span aria-hidden="true">↗</span></a>
         <p class="availability-note">Consulta la disponibilidad en la biblioteca de tu escuela.</p>
       </div>
       <section class="dialog-reviews" aria-labelledby="dialog-reviews-title">
@@ -141,7 +178,7 @@
             <span class="book-category">Opiniones</span>
             <h3 id="dialog-reviews-title">Reseñas mejor valoradas</h3>
           </div>
-          <p>Hasta 3 reseñas</p>
+          <button class="secondary-button" id="dialog-view-all-reviews" type="button">Ver todas las reseñas</button>
         </div>
         <div class="dialog-review-list" id="dialog-review-list"></div>
         <p class="dialog-reviews-empty" id="dialog-reviews-empty" role="status" hidden>Este libro todavía no tiene reseñas.</p>
@@ -172,3 +209,28 @@
     <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
   </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

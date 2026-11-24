@@ -7,13 +7,14 @@
       name="description"
       content="Biblioteca Escolar José Miguel Carrera: descubre lecturas, recursos y novedades para toda nuestra comunidad."
     />
-    <meta name="theme-color" content="#f7f6f0" />
+    <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-admin") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Administración | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=dark-mode-9" />
+    <link rel="stylesheet" href="styles.css?v=night-blue-1" />
+    <link rel="stylesheet" href="design-overrides.css?v=admin-detail-request-4" />
     <script src="data.js" defer></script>
     <script src="local.js?v=return-ticket-migration-1" defer></script>
-    <script src="script.js?v=dark-mode-10" defer></script>
+    <script src="script.js?v=admin-detail-request-4" defer></script>
   </head>
   <body data-role="admin">
     <header class="site-header">
@@ -28,16 +29,25 @@
       </a>
 
       <div class="header-controls">
-        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menú">
-        <span></span><span></span>
-      </button>
         <button class="theme-toggle" type="button" aria-label="Activar modo nocturno" aria-pressed="false"><span class="theme-toggle-icon" aria-hidden="true">☾</span><span class="theme-toggle-label">Modo nocturno</span></button>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menú de navegación">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9.25"/><circle cx="12" cy="9" r="2.75"/><path d="M6.8 18c.75-2.35 2.4-3.55 5.2-3.55s4.45 1.2 5.2 3.55"/></svg>
+        </button>
       </div>
       <nav class="main-nav admin-nav" id="main-nav" aria-label="Navegación de administración">
         <a class="nav-link active" id="management-nav" href="#gestion" aria-current="location">Administración</a>
       </nav>
     </header>
-    <main id="app-main" hidden>
+    <main id="app-main">
+      <div class="page-loading admin-loading" id="page-loading" role="status" aria-label="Cargando administración" aria-busy="true">
+        <div class="loading-error" hidden></div>
+        <div class="loading-layout" aria-hidden="true">
+          <div class="loading-heading"><i></i><i></i></div>
+          <div class="loading-metrics"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="loading-tabs"><i></i><i></i><i></i><i></i></div>
+          <div class="loading-table"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
       <section class="management-section section-wrap" id="gestion" hidden>
         <div class="section-heading">
           <div><div class="eyebrow"><span class="eyebrow-dot"></span> <span id="management-kicker">Administración bibliotecaria</span></div><h2 id="management-heading">Gestión de <em>la colección.</em></h2></div>
@@ -52,15 +62,27 @@
           <button class="management-tab" type="button" data-admin-only data-panel="audit" role="tab" aria-selected="false">Historial de acciones</button>
         </div>
         <div class="management-panel active" id="panel-inventory" role="tabpanel">
-          <div class="panel-toolbar"><div><h3>Inventario de libros</h3><p>Control de existencias y estado físico de cada título.</p></div><button class="action-button" id="add-book" type="button">＋ Registrar libro</button></div>
-          <div class="table-tools"><input id="inventory-search" type="search" placeholder="Buscar por título, autor o ISBN"><select id="inventory-filter" aria-label="Filtrar inventario"><option value="all">Todos los estados</option><option value="available">Con disponibilidad</option><option value="low">Pocas existencias</option><option value="out">Agotados</option></select></div>
-          <div class="table-scroll" role="region" aria-label="Inventario de libros" tabindex="0"><table><thead><tr><th>Libro</th><th>ISBN</th><th>Total</th><th>Disponibles</th><th>Prestados</th><th>Estado físico</th><th>Acciones</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
-          <p class="module-empty" id="inventory-empty" hidden>No hay libros que coincidan con la búsqueda.</p>
-          <nav class="catalog-pagination" id="inventory-pagination" aria-label="Paginación del inventario" hidden>
-            <button class="catalog-page-button" type="button" data-page="previous" aria-label="Página anterior">Anterior</button>
-            <span class="catalog-page-status" id="inventory-page-status" aria-live="polite"></span>
-            <button class="catalog-page-button" type="button" data-page="next" aria-label="Página siguiente">Siguiente</button>
-          </nav>
+          <div class="panel-toolbar"><div><h3>Inventario de libros</h3><p>Control de existencias y estado físico. Selecciona una fila para abrir su ficha.</p></div><button class="action-button" id="add-book" type="button">＋ Registrar libro</button></div>
+          <div class="table-tools inventory-tools"><input id="inventory-search" type="search" placeholder="Buscar por título o autor"><select id="inventory-filter" aria-label="Filtrar inventario por tema o disponibilidad">
+            <option value="all">Todos los temas</option>
+            <optgroup label="Temas"><option value="theme:Cuentos y leyendas">Cuentos y leyendas</option><option value="theme:Divulgación">Divulgación</option><option value="theme:Literatura Infantil">Literatura Infantil</option><option value="theme:Misterio y fantasía">Misterio y fantasía</option><option value="theme:Narrativa">Narrativa</option><option value="theme:Poesía">Poesía</option><option value="theme:Teatro">Teatro</option></optgroup>
+            <optgroup label="Disponibilidad"><option value="status:available">Con disponibilidad</option><option value="status:low">Pocas existencias</option><option value="status:out">Agotados</option></optgroup>
+          </select><span class="inventory-count-summary" id="inventory-count-summary" aria-live="polite"></span></div>
+          <div class="inventory-workspace">
+            <div class="inventory-list-column">
+              <div class="table-scroll" role="region" aria-label="Inventario de libros" tabindex="0"><table><thead><tr><th>Libro</th><th>Tema</th><th>Total</th><th>Disponibles</th><th>Acciones</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
+              <p class="module-empty" id="inventory-empty" hidden>No hay libros que coincidan con la búsqueda.</p>
+              <nav class="catalog-pagination" id="inventory-pagination" aria-label="Paginación del inventario" hidden>
+                <button class="catalog-page-button" type="button" data-page="previous" aria-label="Página anterior">Anterior</button>
+                <span class="catalog-page-status" id="inventory-page-status" aria-live="polite"></span>
+                <button class="catalog-page-button" type="button" data-page="next" aria-label="Página siguiente">Siguiente</button>
+              </nav>
+            </div>
+            <aside class="inventory-detail" id="inventory-detail" aria-label="Detalle del libro seleccionado" hidden>
+              <button class="inventory-detail-close" id="inventory-detail-close" type="button" aria-label="Cerrar detalle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+              <div id="inventory-detail-content"></div>
+            </aside>
+          </div>
         </div>
         <div class="management-panel" id="panel-loans" role="tabpanel" hidden>
           <div class="panel-toolbar"><div><h3>Préstamos y devoluciones</h3><p>Registra movimientos y supervisa las fechas de devolución.</p></div><button class="action-button" id="add-loan" type="button">＋ Nuevo préstamo</button></div>
@@ -142,3 +164,28 @@
     <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
   </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
