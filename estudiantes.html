@@ -10,11 +10,12 @@
     <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-student") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Estudiantes | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=night-blue-1" />
-    <link rel="stylesheet" href="design-overrides.css?v=mobile-shelves-admin-4" />
+    <link rel="stylesheet" href="styles.css?v=book-covers-full-display-2" />
+    <link rel="stylesheet" href="design-overrides.css?v=book-covers-full-display-2" />
     <script src="data.js" defer></script>
+    <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-library-consolidated-1" defer></script>
     <script src="local.js?v=return-ticket-migration-1" defer></script>
-    <script src="script.js?v=admin-detail-request-4" defer></script>
+    <script src="script.js?v=book-covers-full-display-1" defer></script>
   </head>
   <body data-role="student">
     <header class="site-header">
@@ -75,7 +76,7 @@
         </div>
 
         <section class="mobile-my-books" id="mobile-my-books" aria-labelledby="mobile-my-books-title" hidden>
-          <div class="mobile-shelf-heading"><h3 id="mobile-my-books-title">Mis libros</h3><a href="#panel-estudiante" data-student-page>Ver todos <span aria-hidden="true">›</span></a></div>
+          <div class="mobile-shelf-heading"><h3 id="mobile-my-books-title">Mis libros</h3><div class="mobile-shelf-controls"><button type="button" data-my-books-scroll="-1" aria-label="Ver libros anteriores">‹</button><button type="button" data-my-books-scroll="1" aria-label="Ver más libros">›</button></div></div>
           <div class="mobile-my-books-list" id="mobile-my-books-list"></div>
         </section>
 
@@ -92,7 +93,7 @@
         </nav>
         <div class="catalog-footer">
           <span id="results-count">Mostrando recomendaciones</span>
-          <a class="text-link" href="#panel-estudiante" data-student-page>Ir a mi panel <span aria-hidden="true">→</span></a>
+          <a class="text-link" href="#panel-estudiante" data-student-page>Ir a mi panel</a>
         </div>
       </section>
       </section>
@@ -209,28 +210,3 @@
     <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
   </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -20,12 +20,14 @@ try {
 
 const normalizeBookISBN = (value) => String(value || "").replace(/^ISBN:?/i, "").replace(/[^0-9x]/gi, "").toUpperCase();
 const localCoverArtworkForBook = (book) => {
+  const downloadedCover = globalThis.BIBLIOTECA_BOOK_COVERS?.[book?.id];
+  if (downloadedCover) return downloadedCover;
   const title = String(book?.title || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
   const filename = bookCoverArtworks[title];
-  return filename ? `assets/portadas/${filename}` : "";
+  return filename ? `assets/portadas/portadas_libros/${filename}` : "";
 };
 const googleBookCoverForBook = (book) => googleBookCoverCache.get(normalizeBookISBN(book?.isbn)) || null;
-const coverArtworkForBook = (book) => googleBookCoverForBook(book)?.thumbnailUrl || localCoverArtworkForBook(book);
+const coverArtworkForBook = (book) => localCoverArtworkForBook(book) || googleBookCoverForBook(book)?.thumbnailUrl || "";
 const googleBooksInfoURLForBook = (book) => googleBookCoverForBook(book)?.infoUrl || "";
 
 function persistGoogleBookCoverCache() {
@@ -134,10 +136,10 @@ function refreshOpenGoogleBooksLink() {
 function bookCoverImageMarkup(book, className) {
   const googleCover = googleBookCoverForBook(book);
   const localCover = localCoverArtworkForBook(book);
-  const source = googleCover?.thumbnailUrl || localCover;
+  const source = localCover || googleCover?.thumbnailUrl;
   if (!source) return "";
-  const googleAttribute = googleCover?.thumbnailUrl ? 'data-google-cover="true"' : "";
-  const fallbackAttribute = googleCover?.thumbnailUrl && localCover ? `data-fallback-cover="${escapeHTML(localCover)}"` : "";
+  const googleAttribute = !localCover && googleCover?.thumbnailUrl ? 'data-google-cover="true"' : "";
+  const fallbackAttribute = googleCover?.thumbnailUrl && localCover && !globalThis.BIBLIOTECA_BOOK_COVERS?.[book?.id] ? `data-fallback-cover="${escapeHTML(localCover)}"` : "";
   return `<img class="${className}" src="${escapeHTML(source)}" alt="" loading="lazy" data-book-cover-image="true" ${googleAttribute} ${fallbackAttribute}>`;
 }
 const roleNames = { admin: "Administrador", student: "Estudiante" };
@@ -1044,8 +1046,7 @@ function renderMobileMyBooks() {
     }));
   const items = [...requested, ...borrowed]
     .filter((item) => item.title || item.book)
-    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")))
-    .slice(0, 2);
+    .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
   list.innerHTML = items.length ? items.map(({ book, title, status, date, dateLabel, icon }) => `
     <article class="mobile-my-book-card${status === "Listo para retirar" ? " is-ready" : ""}">
       <div class="mobile-my-book-copy">
@@ -1055,7 +1056,7 @@ function renderMobileMyBooks() {
         ${date ? `<small><strong>${escapeHTML(dateLabel)}</strong> · ${escapeHTML(formatDate(String(date).slice(0, 10)))}</small>` : ""}
       </div>
       ${book ? (bookCoverImageMarkup(book, "mobile-my-book-cover") || `<span class="mobile-my-book-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"></span>`) : ""}
-    </article>`).join("") : '<p class="mobile-my-books-empty">Aún no tienes préstamos activos. Encuentra tu próxima lectura.</p>';
+    </article>`).join("") : '<p class="mobile-my-books-empty">Aún no tienes libros en seguimiento. Encuentra tu próxima lectura.</p>';
   section.hidden = false;
   return items.map((item) => item.book).filter(Boolean);
 }
@@ -1473,9 +1474,9 @@ function renderStudentPanel() {
   const readBooksOpen = !$("#student-read-books").hidden;
   const activeLoans = loans.filter((loan) => loan.status !== "Devuelto").length;
   $("#student-summary").innerHTML = [
+    ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
     ["Préstamos activos", activeLoans, "Ver préstamos activos", "active"],
     ["Préstamos pendientes", pendingLoans, "Ver solicitudes pendientes", "pending"],
-    ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
     ["Historial", loans.length + requests.length, "Ver todos los movimientos", "history"],
   ].map(([label, count, note, key]) => key === "read"
     ? `<button class="stat-card stat-card-button" id="student-read-books-toggle" type="button" aria-controls="student-read-books" aria-expanded="${readBooksOpen}" aria-pressed="${selectedSummaryPanel === "read"}"><span>${label}</span><strong>${count}</strong><small>${note}</small></button>`
@@ -1916,6 +1917,17 @@ function bindUI() {
     }
     const button = event.target.closest("[data-book]");
     if (button) showBookDetails(button.dataset.book);
+  });
+
+  $("#mobile-my-books")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-my-books-scroll]");
+    if (!button) return;
+    const list = $("#mobile-my-books-list");
+    const card = list?.querySelector(".mobile-my-book-card");
+    if (!list || !card) return;
+    const direction = Number(button.dataset.myBooksScroll) || 1;
+    const gap = Number.parseFloat(getComputedStyle(list).columnGap) || 0;
+    list.scrollBy({ left: direction * (card.getBoundingClientRect().width + gap), behavior: "smooth" });
   });
   $("#available-only")?.addEventListener("change", () => renderCatalog(true));
   $("#book-dialog .dialog-close")?.addEventListener("click", () => $("#book-dialog").close());

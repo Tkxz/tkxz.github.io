@@ -177,8 +177,11 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .book-arrow { width: 27px; height: 27px; flex: 0 0 27px; display: grid; place-items: center; border: 1px solid #e5e6de; border-radius: 50%; color: var(--green); font-size: 14px; transition: background-color .35s ease, color .35s ease, border-color .35s ease; }
 .book-card:hover .book-arrow { background: var(--green); color: white; }
 .empty-state { padding: 35px 0; color: var(--muted); font-size: 13px; text-align: center; }
-.catalog-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; color: #92968f; font-size: 9px; }
-.catalog-pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 20px 0 4px; }
+.catalog-section { padding-bottom: 12px; }
+.catalog-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px; padding: 0; color: #92968f; font-size: 10px; line-height: 1.25; user-select: text; -webkit-user-select: text; }
+.catalog-footer, .catalog-footer * { user-select: text; -webkit-user-select: text; }
+.student-review-area { display: none !important; }
+.catalog-pagination { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 10px 0 2px; }
 .catalog-page-button { min-height: 38px; padding: 0 14px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--ink); font-size: 12px; cursor: pointer; }
 .catalog-page-button:hover:not(:disabled) { border-color: var(--green); color: var(--green); }
 .catalog-page-button:disabled { opacity: .45; cursor: default; }
@@ -1135,7 +1138,7 @@ button:active {
   .catalog-pagination { gap: 10px; margin: 16px 0 4px; }
   .catalog-page-button { min-height: 42px; border-radius: 10px; background: #fffefa; font-weight: 650; }
   .catalog-page-status { font-size: 13px; }
-  .catalog-footer { margin-top: 17px; color: #66736a; font-size: 11px; }
+  .catalog-footer { margin-top: 6px; color: #66736a; font-size: 10px; }
   .catalog-footer .text-link { color: #315b43; font-weight: 700; }
   :root[data-theme="dark"] .site-header { background: rgba(28, 36, 31, .97); border-bottom-color: #354139; box-shadow: 0 4px 18px rgba(0, 0, 0, .18); }
   :root[data-theme="dark"] .menu-toggle { border-color: #46554a; background: #252f28; }
