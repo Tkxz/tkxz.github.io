@@ -1,13 +1,6 @@
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
-const bookCoverArtworks = {
-  "los viajes de gulliver": "gulliver.webp",
-  "el viejo y el mar": "el-viejo-y-el-mar.webp",
-  fuenteovejuna: "fuenteovejuna.webp",
-  "gracia y el forastero": "gracia-y-el-forastero.webp",
-  "estrella y el caleidoscopio": "caleidoscopio.webp",
-  "la serpiente blanca": "serpiente-blanca.webp",
-};
+const bookCoverArtworks = {};
 const googleBookCoverCacheKey = "biblioteca-google-book-covers-v1";
 const googleBookCoverCache = new Map();
 const googleBookCoverPending = new Map();
@@ -19,16 +12,10 @@ try {
 } catch (error) {}
 
 const normalizeBookISBN = (value) => String(value || "").replace(/^ISBN:?/i, "").replace(/[^0-9x]/gi, "").toUpperCase();
-const localCoverArtworkForBook = (book) => {
-  const downloadedCover = globalThis.BIBLIOTECA_BOOK_COVERS?.[book?.id];
-  if (downloadedCover) return downloadedCover;
-  const title = String(book?.title || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
-  const filename = bookCoverArtworks[title];
-  return filename ? `assets/portadas/portadas_libros/${filename}` : "";
-};
-const googleBookCoverForBook = (book) => googleBookCoverCache.get(normalizeBookISBN(book?.isbn)) || null;
-const coverArtworkForBook = (book) => localCoverArtworkForBook(book) || googleBookCoverForBook(book)?.thumbnailUrl || "";
-const googleBooksInfoURLForBook = (book) => googleBookCoverForBook(book)?.infoUrl || "";
+const localCoverArtworkForBook = () => "";
+const googleBookCoverForBook = () => null;
+const coverArtworkForBook = () => "";
+const googleBooksInfoURLForBook = () => "";
 
 function persistGoogleBookCoverCache() {
   try {
@@ -88,7 +75,7 @@ function flushGoogleBookCoverQueue() {
 
 function requestGoogleBookCover(book) {
   const isbn = normalizeBookISBN(book?.isbn);
-  if (!isbn || googleBookCoverCache.has(isbn)) return Promise.resolve(googleBookCoverCache.get(isbn) || null);
+  if (!isbn || globalThis.BIBLIOTECA_REJECTED_BOOK_ISBNS?.includes(isbn) || googleBookCoverCache.has(isbn)) return Promise.resolve(googleBookCoverForBook(book));
   return new Promise((resolve) => {
     const waiters = googleBookCoverPending.get(isbn) || [];
     waiters.push(resolve);
@@ -100,15 +87,7 @@ function requestGoogleBookCover(book) {
 }
 
 async function loadGoogleBookCovers(books) {
-  const uniqueBooks = [...new Map(books.map((book) => [normalizeBookISBN(book?.isbn), book]).filter(([isbn]) => isbn)).values()];
-  const toLoad = uniqueBooks.filter((book) => !googleBookCoverCache.has(normalizeBookISBN(book.isbn)));
-  if (!toLoad.length) return false;
-  let updated = false;
-  for (let index = 0; index < toLoad.length; index += 20) {
-    const results = await Promise.all(toLoad.slice(index, index + 20).map(requestGoogleBookCover));
-    updated ||= results.some((cover) => Boolean(cover?.thumbnailUrl || cover?.infoUrl));
-  }
-  return updated;
+  return false;
 }
 
 function updateGoogleBooksLink(book) {
@@ -134,13 +113,7 @@ function refreshOpenGoogleBooksLink() {
 }
 
 function bookCoverImageMarkup(book, className) {
-  const googleCover = googleBookCoverForBook(book);
-  const localCover = localCoverArtworkForBook(book);
-  const source = localCover || googleCover?.thumbnailUrl;
-  if (!source) return "";
-  const googleAttribute = !localCover && googleCover?.thumbnailUrl ? 'data-google-cover="true"' : "";
-  const fallbackAttribute = googleCover?.thumbnailUrl && localCover && !globalThis.BIBLIOTECA_BOOK_COVERS?.[book?.id] ? `data-fallback-cover="${escapeHTML(localCover)}"` : "";
-  return `<img class="${className}" src="${escapeHTML(source)}" alt="" loading="lazy" data-book-cover-image="true" ${googleAttribute} ${fallbackAttribute}>`;
+  return "";
 }
 const roleNames = { admin: "Administrador", student: "Estudiante" };
 const pageRole = document.body.dataset.role;
@@ -1477,7 +1450,7 @@ function renderStudentPanel() {
     ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
     ["Préstamos activos", activeLoans, "Ver préstamos activos", "active"],
     ["Préstamos pendientes", pendingLoans, "Ver solicitudes pendientes", "pending"],
-    ["Historial", loans.length + requests.length, "Ver todos los movimientos", "history"],
+    ["Historial de actividades", loans.length + requests.length, "Ver todos los movimientos", "history"],
   ].map(([label, count, note, key]) => key === "read"
     ? `<button class="stat-card stat-card-button" id="student-read-books-toggle" type="button" aria-controls="student-read-books" aria-expanded="${readBooksOpen}" aria-pressed="${selectedSummaryPanel === "read"}"><span>${label}</span><strong>${count}</strong><small>${note}</small></button>`
     : `<button class="stat-card stat-card-button" type="button" data-activity-mode="${key}" aria-controls="student-request-details" aria-expanded="${activityOpen && selectedSummaryPanel === key}" aria-pressed="${selectedSummaryPanel === key}"><span>${label}</span><strong>${count}</strong><small>${note}</small></button>`).join("");

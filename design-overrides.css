@@ -621,15 +621,15 @@
   .mobile-shelf-controls { display: flex; align-items: center; gap: 9px; }
   .mobile-shelf-controls button { display: grid; width: 25px; height: 25px; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: #36637a; font-size: 22px; line-height: 1; }
   .mobile-shelf-controls button:first-child { color: #aab8bd; }
-  .mobile-shelf-scroll { display: grid; grid-auto-columns: minmax(150px, 42vw); grid-auto-flow: column; gap: 12px; overflow-x: auto; padding: 1px 1px 8px; overscroll-behavior-inline: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
-  .mobile-book-tile { display: grid; grid-template-rows: 225px auto auto auto; align-content: start; gap: 5px; min-width: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #193c51; text-align: left; scroll-snap-align: start; }
+  .mobile-shelf-scroll { display: grid; grid-auto-columns: 150px; grid-auto-flow: column; gap: 12px; overflow-x: auto; padding: 1px 1px 8px; overscroll-behavior-inline: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .mobile-book-tile { display: grid; grid-template-rows: 112px auto auto auto; align-content: start; gap: 4px; min-width: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #193c51; text-align: left; scroll-snap-align: start; }
   .mobile-book-tile:active { transform: scale(.98); }
   .mobile-shelf-cover,
-  .mobile-shelf-cover-fallback { display: block; width: 100%; height: 225px; overflow: hidden; border-radius: 7px; object-fit: contain; }
+  .mobile-shelf-cover-fallback { display: block; width: 150px; height: 112px; overflow: hidden; border-radius: 7px; object-fit: contain; }
   .mobile-shelf-cover { background: #eef2f0; }
   .mobile-shelf-cover-fallback { position: relative; }
   .mobile-shelf-cover-fallback { display: grid; place-items: center; }
-  .mobile-shelf-cover-fallback .cover-title { font-size: 13px; }
+  .mobile-shelf-cover-fallback .cover-title { font-size: 11px; }
   .mobile-book-tile > strong { display: -webkit-box; overflow: hidden; color: #193c51; font-size: 13px; font-weight: 750; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
   .mobile-book-tile > span:not(.mobile-shelf-cover-fallback) { overflow: hidden; color: #7b8d96; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
   .mobile-book-tile > small { color: #2f7b58; font-size: 10px; font-weight: 700; }
