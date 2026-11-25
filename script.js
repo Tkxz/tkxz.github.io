@@ -823,15 +823,16 @@ async function refreshState(applyAccess = false) {
     if (request === stateRequest) throw error;
   });
   if (request !== stateRequest) return;
-  if (applyAccess || data.user?.id !== next.user?.id || data.user?.role !== next.user?.role) {
+  const accessChanged = data.user?.id !== next.user?.id || data.user?.role !== next.user?.role;
+  const stateChanged = JSON.stringify(data) !== JSON.stringify(next);
+  if (applyAccess || accessChanged) {
     data = next;
     renderPage();
-  } else {
+  } else if (stateChanged) {
     data = next;
     if (roleAllowsPage(data.user?.role)) renderAll();
   }
 }
-
 function displayError(error, region) {
   if (region) {
     region.textContent = error.message;
@@ -2415,7 +2416,7 @@ function setupPage() {
   window.setInterval(() => {
     if (document.hidden || data.user?.role !== "admin" || document.querySelector("dialog[open]")) return;
     refreshState().catch(() => {});
-  }, 5000);
+  }, 15000);
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) refreshState(true).catch((error) => showPageError(error.message));
   });
