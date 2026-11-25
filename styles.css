@@ -1754,3 +1754,13 @@ button:active {
   .student-request-area .table-scroll table.is-history-mode td:nth-child(6) { width: 14%; }
   .student-request-area .module-empty { width: 100%; max-width: 100%; padding: 14px 10px; overflow-wrap: anywhere; font-size: 12px; }
 }
+
+/* Las plantillas ocupan el ancho y ritmo de las secciones reales. */
+.admin-loading .loading-layout, .student-loading .loading-layout { max-width: 1600px; }
+.admin-loading .loading-heading { display: flex; align-items: end; justify-content: space-between; min-height: 108px; }
+.admin-loading .loading-heading i:first-child { width: min(48%, 610px); height: 58px; }
+.admin-loading .loading-heading i:last-child { width: min(22%, 360px); height: 64px; margin-bottom: 4px; }
+.student-loading .loading-heading { min-height: 150px; align-content: center; }
+.student-loading .loading-heading i:first-child { width: min(52%, 620px); height: 56px; }
+.student-loading .loading-heading i:last-child { width: min(34%, 420px); height: 18px; }
+@media (max-width: 680px) { .admin-loading .loading-heading { min-height: 92px; } .admin-loading .loading-heading i:last-child { display: none; } .student-loading .loading-heading { min-height: 110px; } }
