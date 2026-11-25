@@ -718,3 +718,6 @@
   .mobile-shelf-frame .mobile-shelf-cover { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; padding: 6px; box-sizing: border-box; object-fit: contain; background: transparent; filter: drop-shadow(0 3px 7px rgba(21, 46, 67, .3)); }
   :root[data-theme="dark"] .mobile-shelf-frame { background: #23343e; }
 }
+
+/* Oculta la descripción redundante de la cabecera administrativa. */
+.management-section .section-heading > p { display: none; }

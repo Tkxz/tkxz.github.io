@@ -810,7 +810,6 @@ function renderPage() {
     const emphasis = document.createElement("em");
     emphasis.textContent = "la colección.";
     $("#management-heading").replaceChildren("Gestión de ", emphasis);
-    $("#management-description").textContent = "Administra ejemplares, controla préstamos y comparte opiniones sobre las lecturas.";
     $("#management-nav").textContent = "Administración";
     activateTab("inventory");
   }
