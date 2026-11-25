@@ -719,5 +719,3 @@
   :root[data-theme="dark"] .mobile-shelf-frame { background: #23343e; }
 }
 
-/* Oculta la descripción redundante de la cabecera administrativa. */
-.management-section .section-heading > p { display: none; }
