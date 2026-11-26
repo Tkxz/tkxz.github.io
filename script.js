@@ -1066,7 +1066,7 @@ function renderStudentDirectory() {
   const filtered = [...students.values()]
     .filter((student) => `${student.name} ${student.id}`.toLocaleLowerCase("es").includes(query))
     .sort((a, b) => a.name.localeCompare(b.name, "es") || a.key.localeCompare(b.key));
-  const selected = filtered.find((student) => student.key === selectedStudentKey) || filtered[0];
+  const selected = filtered.find((student) => student.key === selectedStudentKey) || null;
   selectedStudentKey = selected?.key || "";
   $("#estudiantes")?.classList.toggle("is-profile-open", Boolean(selected) && studentDirectoryView === "profile");
 
