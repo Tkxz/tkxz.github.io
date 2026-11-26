@@ -523,6 +523,8 @@
 #panel-inventory .panel-toolbar h3 { color: #183b50; font: 750 clamp(25px, 3vw, 34px)/1.1 var(--sans); letter-spacing: -.04em; }
 #panel-inventory .panel-toolbar p { display: none; }
 #panel-inventory .panel-toolbar .action-button { border-radius: 8px; background: #155875; border-color: #155875; }
+#panel-inventory .panel-toolbar .row-actions .action-button { padding: 0 15px; border: 1px solid #155875; background: #155875; color: #fff; }
+#panel-inventory .panel-toolbar .row-actions .action-button:hover { background: #10465e; border-color: #10465e; color: #fff; }
 #panel-inventory .table-tools { align-items: center; margin: 0 0 18px; }
 #panel-inventory .table-tools input { max-width: 355px; border-radius: 8px; }
 #panel-inventory .table-tools .custom-select-control { min-width: 175px; }
@@ -594,7 +596,9 @@
   :root[data-theme="dark"] .catalog-heading-mobile { color: #e3ebef; }
   .catalog-tools { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 0 0 22px; }
   .catalog-tools .filter-list { display: none; }
-  .catalog-tools .search-box { order: 0; height: 46px; }
+  .catalog-search-controls { order: 0; flex: 0 0 auto; width: 100%; }
+  .catalog-tools .catalog-search-controls .search-box { width: 100%; height: 46px; }
+  .catalog-search-controls .publisher-filter-control .custom-select-trigger { min-height: 46px; height: 46px; }
   .available-only-control { order: 1; display: inline-flex; align-items: center; align-self: flex-start; gap: 7px; color: #526779; font-size: 12px; font-weight: 600; }
   .available-only-control input { width: 16px; height: 16px; margin: 0; accent-color: #155875; }
   :root[data-theme="dark"] .available-only-control { color: #b9c8ce; }
@@ -685,6 +689,7 @@
   #panel-inventory .panel-toolbar { align-items: stretch; flex-direction: row; }
   #panel-inventory .panel-toolbar h3 { font-size: 22px; }
   #panel-inventory .panel-toolbar .action-button { min-height: 39px; padding: 0 10px; font-size: 10px; white-space: nowrap; }
+  #panel-inventory .panel-toolbar .row-actions .action-button { padding: 0 10px; }
   #panel-inventory .table-tools { display: grid; grid-template-columns: minmax(0, 1fr); }
   #panel-inventory .table-tools input { max-width: none; }
   #panel-inventory .inventory-count-summary { margin: 1px 0 0; text-align: right; }

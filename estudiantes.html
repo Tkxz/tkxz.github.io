@@ -10,12 +10,12 @@
     <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-student") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Estudiantes | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=publisher-year-filter-5" />
-    <link rel="stylesheet" href="design-overrides.css?v=student-desktop-only-2" />
-    <script src="data.js" defer></script>
+    <link rel="stylesheet" href="styles.css?v=isbn-barcode-lookup-1" />
+    <link rel="stylesheet" href="design-overrides.css?v=student-publisher-filter-layout-3" />
+    <script src="data.js?v=no-ticket-barcode-1" defer></script>
     <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-webp-1" defer></script>
-    <script src="local.js?v=reading-metrics-book-zones-2" defer></script>
-    <script src="script.js?v=publisher-year-filter-5" defer></script>
+    <script src="local.js?v=no-ticket-barcode-1" defer></script>
+    <script src="script.js?v=isbn-barcode-lookup-1" defer></script>
   </head>
   <body data-role="student">
     <header class="site-header">
@@ -64,15 +64,17 @@
           <div class="filter-list" role="group" aria-label="Filtrar libros por categoría">
             <button class="filter-chip selected" type="button" data-category="Todos">Todos <span>0</span></button>
           </div>
-          <label class="publisher-filter-control"><span>Editorial</span><select id="publisher-filter" aria-label="Filtrar libros por editorial"><option value="all">Todas las editoriales</option></select></label>
-          <label class="search-box">
-            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <circle cx="8.7" cy="8.7" r="5.7"></circle>
-              <path d="m13 13 4 4"></path>
-            </svg>
-            <input id="book-search" type="search" placeholder="Buscar un libro..." autocomplete="off" />
-            <span class="search-shortcut" aria-hidden="true">⌕</span>
-          </label>
+          <div class="catalog-search-controls">
+            <label class="search-box">
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="8.7" cy="8.7" r="5.7"></circle>
+                <path d="m13 13 4 4"></path>
+              </svg>
+              <input id="book-search" type="search" placeholder="Buscar un libro..." autocomplete="off" />
+              <span class="search-shortcut" aria-hidden="true">⌕</span>
+            </label>
+            <label class="publisher-filter-control"><span>Editorial</span><select id="publisher-filter" aria-label="Filtrar libros por editorial"><option value="all">Todas las editoriales</option></select></label>
+          </div>
           <label class="available-only-control"><input id="available-only" type="checkbox"><span>Solo disponibles</span></label>
         </div>
 
@@ -209,7 +211,6 @@
           <div id="ticket-return-status-field" hidden><dt>Plazo</dt><dd id="ticket-return-status"></dd></div>
           <div id="ticket-comment-field" hidden><dt>Comentario eliminado</dt><dd id="ticket-comment"></dd></div>
         </dl>
-        <div id="ticket-isbn-barcode" class="ticket-barcode" hidden></div>
       </div>
       <button class="action-button ticket-print-button" id="ticket-print" type="button">Imprimir ticket</button>
     </dialog>

@@ -4,7 +4,10 @@
   if (root) root.BibliotecaLocal = api;
 })(typeof globalThis === "object" ? globalThis : this, function () {
   const storageKey = "biblioteca-local-v1";
-  const seedCatalogVersion = 2;
+  const seedCatalogVersion = 5;
+  const craIsbnUpdatedBookIds = new Set([
+    "b1", "b2", "b4", "b8", "b9", "b19", "b21", "b24", "b25", "b27", "b28", "b29", "b30", "b31", "b33", "b34", "b38", "b44", "b46", "b47", "b50", "b51", "b55", "b56", "b60", "b62", "b63", "b68", "b73", "b78", "b79", "b80", "b83", "b85", "b88", "b90", "b94", "b98", "b99", "b100", "b101", "b102", "b103", "b110", "b114", "b115", "b118", "b120", "b123", "b124", "b125", "b126", "b128", "b129", "b132", "b134", "b135", "b140", "b142", "b144", "b147", "b153", "b154", "b157", "b158", "b159", "b160", "b161", "b163", "b164", "b166", "b167", "b170", "b171", "b175", "b176", "b178", "b183", "b189", "b190", "b193", "b197", "b198", "b201", "b205", "b207", "b209", "b214", "b218", "b223", "b224", "b225", "b227", "b240", "b243", "b249", "b250", "b253", "b264", "b266", "b267", "b269", "b284", "b287", "b288", "b292", "b294", "b296", "b297", "b299", "b302", "b305", "b315", "b325", "b329", "b331", "b333", "b336", "b337", "b339", "b342", "b343", "b355", "b356", "b361", "b362", "b367", "b372", "b377", "b378", "b380", "b385", "b389", "b393", "b394", "b397", "b399", "b401", "b402", "b407", "b408", "b410", "b414", "b415", "b421", "b430", "b436", "b440", "b448", "b452", "b454", "b456", "b457", "b463", "b464", "b465", "b468", "b472", "b475", "b476", "b477", "b485", "b494", "b496", "b500", "b504", "b505", "b513", "b514", "b516", "b518", "b521", "b531", "b532", "b533", "b536", "b541", "b544", "b545", "b547", "b549", "b552", "b553",
+  ]);
   const conditions = ["Nuevo", "Bueno", "Regular", "Deteriorado"];
   const schoolDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit",
@@ -233,6 +236,7 @@
 
     function migrateSeedCatalog(state) {
       if (Number(state.seedCatalogVersion) >= seedCatalogVersion) return false;
+      const applyCraIsbnMigration = Number(state.seedCatalogVersion || 0) < 5;
       const booksById = new Map(state.books.map((book) => [book.id, book]));
       const validCovers = new Set(seed.initialBooks.map((book) => book.cover).filter(Boolean));
       for (const original of seed.initialBooks) {
@@ -245,6 +249,9 @@
         }
         if (typeof book.author !== "string" || !book.author.trim() || /^autor no identificado$/i.test(book.author.trim())) {
           book.author = original.author;
+        }
+        if (applyCraIsbnMigration && craIsbnUpdatedBookIds.has(original.id) && book.isbn !== original.isbn) {
+          book.isbn = original.isbn;
         }
         if (!validCovers.has(book.cover)) book.cover = original.cover || "cover-1";
       }

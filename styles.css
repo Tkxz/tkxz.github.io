@@ -125,6 +125,11 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .filter-chip.selected { background: var(--green); color: white; }
 .filter-chip span { margin-left: 5px; opacity: .7; font-size: 9px; }
 .search-box { width: 225px; height: 37px; display: flex; align-items: center; gap: 9px; padding: 0 11px; border: 1px solid #e1e1d9; border-radius: 2px; background: #fbfaf6; }
+.catalog-search-controls { display: grid; flex: 0 0 225px; width: 225px; min-width: 0; gap: 8px; }
+.catalog-search-controls .search-box { width: 100%; }
+.catalog-search-controls .publisher-filter-control { width: 100%; min-width: 0; }
+.catalog-search-controls .publisher-filter-control .custom-select-control { width: 100%; min-width: 0; }
+.catalog-search-controls .publisher-filter-control .custom-select-trigger { min-height: 37px; height: 37px; font-size: 16px; }
 .search-box svg { width: 15px; stroke: #8b9189; stroke-width: 1.5; }
 .search-box input { width: 100%; min-width: 0; outline: none; border: 0; background: transparent; color: var(--ink); font-size: 10px; }
 .search-box input::placeholder { color: #a0a49c; }
@@ -250,21 +255,7 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .ticket-content dl div { display: grid; gap: 3px; }
 .ticket-content dt { color: #788078; font-size: 11px; }
 .ticket-content dd { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.ticket-barcode { display: grid; justify-items: center; gap: 2px; margin-top: 16px; padding-top: 10px; border-top: 1px solid #e2e3dc; }
-.ticket-barcode[hidden] { display: none; }
-.ticket-barcode-svg { display: block; width: min(100%, 300px); height: auto; }
-.ticket-barcode-svg text { fill: #111; font: 4px Arial, sans-serif; letter-spacing: .35px; }
 .ticket-print-button { width: 100%; margin-top: 16px; }
-.return-scan-dialog > p { margin: -8px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
-.return-scan-controls { display: grid; gap: 12px; }
-.return-scan-controls .form-field { font-size: 11px; }
-.return-scan-controls .form-field input { margin-top: 3px; }
-.return-scan-matches { display: grid; gap: 9px; }
-.return-scan-match { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--white); }
-.return-scan-match > div { display: grid; gap: 3px; min-width: 0; }
-.return-scan-match span, .return-scan-match small { color: var(--muted); font-size: 10px; }
-.return-scan-match strong, .return-scan-match span { overflow-wrap: anywhere; }
-.return-scan-match .action-button { flex: 0 0 auto; min-height: 36px; padding: 0 10px; font-size: 10px; }
 @media print {
   body * { visibility: hidden !important; }
   body > :not(#ticket-dialog) { display: none !important; }
@@ -441,8 +432,13 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .cover-upload-control > small { grid-column: 1 / -1; color: var(--muted); font-size: 10px; font-weight: 400; }
 .form-field input, .form-field select, .form-field textarea { width: 100%; font-weight: 400; }
 .isbn-lookup { display: grid; gap: 8px; }
+.isbn-field-label { color: #69736b; font-size: 9px; font-weight: 600; }
 .isbn-lookup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .isbn-lookup-actions .secondary-button, .isbn-camera .secondary-button { min-height: 36px; border-radius: 6px; font-size: 10px; }
+.isbn-barcode-preview { display: grid; justify-items: center; padding: 9px 12px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+.isbn-barcode-preview[hidden] { display: none; }
+.isbn-barcode-svg { display: block; width: min(100%, 300px); height: auto; }
+.isbn-barcode-svg text { fill: #111; font: 4px Arial, sans-serif; letter-spacing: .35px; }
 .isbn-lookup-status { min-height: 0; margin: 0; color: var(--muted); font-size: 10px; font-weight: 400; line-height: 1.4; }
 .isbn-lookup-status:empty { display: none; }
 .isbn-lookup-status[data-state="error"] { color: #a64134; }
@@ -450,6 +446,18 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .isbn-camera { display: grid; justify-items: start; gap: 8px; }
 .isbn-camera video { width: min(100%, 340px); aspect-ratio: 4 / 3; border-radius: 8px; background: #111; object-fit: cover; }
 .isbn-camera[hidden] { display: none; }
+.cra-barcode-dialog { width: min(760px, calc(100% - 28px)); }
+.cra-barcode-description { margin: -8px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.cra-barcode-controls { display: grid; gap: 12px; }
+.cra-barcode-controls .form-field { font-size: 11px; }
+.cra-barcode-results { display: grid; gap: 14px; max-height: 48vh; overflow-y: auto; }
+.cra-barcode-record { padding: 15px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); }
+.cra-barcode-record h3 { margin: 0 0 12px; color: var(--green); font-size: 17px; }
+.cra-barcode-record dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; }
+.cra-barcode-record dl div { min-width: 0; }
+.cra-barcode-record dt { color: var(--muted); font-size: 10px; font-weight: 600; }
+.cra-barcode-record dd { margin: 3px 0 0; font-size: 12px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.cra-barcode-source, .cra-barcode-empty { margin: 0; color: var(--muted); font-size: 12px; }
 .form-field:has(input[type="checkbox"]) { display: flex; align-items: center; gap: 9px; }
 .form-field input[type="checkbox"] { width: auto; min-height: 0; padding: 0; accent-color: var(--green); }
 .form-field textarea { min-height: 95px; resize: vertical; }
@@ -805,6 +813,8 @@ input, select, textarea { font: inherit; }
   .filter-chip { min-height: 48px; padding: 12px 18px; font-size: 17px; }
   .filter-chip span { font-size: 14px; }
   .search-box { width: 280px; height: 50px; }
+  .catalog-search-controls { flex-basis: 280px; width: 280px; }
+  .catalog-search-controls .publisher-filter-control .custom-select-trigger { min-height: 50px; height: 50px; font-size: 18px; }
   .search-box input { font-size: 18px; }
   .book-category { font-size: 14px; }
   .book-info h3 { font-size: 20px; }
@@ -855,6 +865,9 @@ input, select, textarea { font: inherit; }
   .management-dialog .form-field textarea { min-height: 140px; }
   .management-dialog .action-button,
   .management-dialog .secondary-button { min-height: 58px; padding: 0 22px; font-size: 18px; }
+  .isbn-field-label { font-size: 18px; }
+  .cra-barcode-record dt { font-size: 14px; }
+  .cra-barcode-record dd { font-size: 16px; }
   .ticket-dialog { width: min(680px, calc(100% - 48px)); max-width: 680px; padding: 38px; }
   .ticket-content { padding: 28px; }
   .ticket-brand { font-size: 18px; }
@@ -1202,6 +1215,7 @@ button:active {
   }
   .search-box:focus-within { border-color: #6c9271; box-shadow: 0 0 0 3px rgba(76, 124, 83, .13); }
   .search-box input { font-size: 15px; }
+  .catalog-search-controls .publisher-filter-control .custom-select-trigger { font-size: 15px; }
   .search-box svg { width: 17px; stroke: #627b68; }
   .filter-list { gap: 7px; padding: 3px 2px 9px; }
   .filter-chip {

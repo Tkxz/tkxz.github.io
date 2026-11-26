@@ -43,7 +43,6 @@ def probar(base_url, isbn):
         status, health = solicitar(f"{base_url}/api/health")
         if status == 200 and health.get("estado") == "ok":
             print("[OK] /api/health responde correctamente")
-            print(f"     Catálogo cargado: {health.get('catalogoCargado')}")
         else:
             errores.append(f"/api/health respondió HTTP {status}: {health}")
             print(f"[ERROR] {errores[-1]}")
@@ -74,6 +73,13 @@ def probar(base_url, isbn):
                 if count == 0:
                     print("El ISBN tiene formato válido, pero no aparece en el catálogo consultado.")
 
+        status, health = solicitar(f"{base_url}/api/health")
+        if status == 200 and health.get("estado") == "ok":
+            print(f"[OK] Catálogo cargado tras la consulta: {health.get('catalogoCargado')}")
+        else:
+            errores.append(f"/api/health respondió HTTP {status} después de consultar el ISBN: {health}")
+            print(f"[ERROR] {errores[-1]}")
+
     except RuntimeError as error:
         errores.append(str(error))
         print(f"[ERROR] {error}")
@@ -95,8 +101,8 @@ def main():
     )
     parser.add_argument(
         "--isbn",
-        default="9788427725577",
-        help="ISBN para consultar (por defecto: 9788427725577)",
+        default="9789871138630",
+        help="ISBN para consultar (por defecto: 9789871138630)",
     )
     args = parser.parse_args()
     return probar(args.base_url, args.isbn)

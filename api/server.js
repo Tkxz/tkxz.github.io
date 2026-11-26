@@ -6,9 +6,10 @@ const CATALOG_URL = "https://bibliotecas-cra.cl/wp-content/uploads/2025/06/Catal
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 24 * 60 * 60 * 1000);
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_DOWNLOAD_BYTES = 40 * 1024 * 1024;
-// CRA cataloga la edición impresa; algunas fichas de BDEscolar muestran el eISBN.
+// CRA suele catalogar la edición impresa; algunas fichas muestran el eISBN.
 const ISBN_ALIASES = {
   "9788427725577": ["9788427725560"],
+  "9788426409966": ["9788426418678", "9789871138630"],
 };
 
 let catalogCache = null;
@@ -150,7 +151,13 @@ const server = http.createServer(async (request, response) => {
 
   try {
     const catalog = await getCatalog();
-    const searchIsbns = [normalizedIsbn, ...(ISBN_ALIASES[normalizedIsbn] || [])];
+    const searchIsbns = [
+      normalizedIsbn,
+      ...(ISBN_ALIASES[normalizedIsbn] || []),
+      ...Object.entries(ISBN_ALIASES)
+        .filter(([, aliases]) => aliases.includes(normalizedIsbn))
+        .map(([isbn]) => isbn),
+    ];
     const matches = catalog.records
       .filter((record) => record.isbns.some((item) => searchIsbns.includes(normalizeIsbn(item.valor))))
       .map(({ hoja, datos, isbns }) => ({
@@ -158,7 +165,7 @@ const server = http.createServer(async (request, response) => {
         isbnCoincidente: isbns.find((item) => searchIsbns.includes(normalizeIsbn(item.valor)))?.valor,
         coincidenciaPor: isbns.some((item) => normalizeIsbn(item.valor) === normalizedIsbn)
           ? "ISBN exacto"
-          : "ISBN alternativo de la edición impresa",
+        : "ISBN alternativo de la misma obra",
         hoja,
         ...datos,
       }));
