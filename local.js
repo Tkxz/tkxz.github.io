@@ -100,7 +100,7 @@
       author: textField(input.author, "El autor"),
       isbn,
       publisher: textField(input.publisher, "La editorial"),
-      year: integerField(input.year, "El año de publicación", 0, 2100),
+      year: input.year === "" || input.year == null ? null : integerField(input.year, "El año de edición", 0, 2100),
       category: textField(input.category, "La categoría", { max: 50 }),
       description: textField(input.description, "La descripción", { min: 0, max: 600 }),
       total,

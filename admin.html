@@ -10,12 +10,12 @@
     <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-admin") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Administración | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=student-desktop-return-1" />
+    <link rel="stylesheet" href="styles.css?v=publisher-year-filter-5" />
     <link rel="stylesheet" href="design-overrides.css?v=loans-requests-merged-1" />
     <script src="data.js" defer></script>
     <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-webp-1" defer></script>
     <script src="local.js?v=reading-metrics-book-zones-2" defer></script>
-    <script src="script.js?v=student-desktop-return-1" defer></script>
+    <script src="script.js?v=publisher-year-filter-5" defer></script>
   </head>
   <body data-role="admin">
     <header class="site-header">
@@ -66,11 +66,11 @@
         </div>
         <div class="management-panel active" id="panel-inventory" role="tabpanel">
           <div class="panel-toolbar"><div><h3>Inventario de libros</h3><p>Control de existencias y estado físico. Selecciona una fila para abrir su ficha.</p></div><button class="action-button" id="add-book" type="button">＋ Registrar libro</button></div>
-          <div class="table-tools inventory-tools"><input id="inventory-search" type="search" placeholder="Buscar por título o autor"><select id="inventory-filter" aria-label="Filtrar inventario por tema o disponibilidad">
+          <div class="table-tools inventory-tools"><input id="inventory-search" type="search" placeholder="Buscar por título, autor o editorial"><select id="inventory-filter" aria-label="Filtrar inventario por tema o disponibilidad">
             <option value="all">Todos los temas</option>
             <optgroup label="Temas"><option value="theme:Cuentos y leyendas">Cuentos y leyendas</option><option value="theme:Divulgación">Divulgación</option><option value="theme:Literatura Infantil">Literatura Infantil</option><option value="theme:Misterio y fantasía">Misterio y fantasía</option><option value="theme:Narrativa">Narrativa</option><option value="theme:Poesía">Poesía</option><option value="theme:Teatro">Teatro</option></optgroup>
             <optgroup label="Disponibilidad"><option value="status:available">Con disponibilidad</option><option value="status:low">Pocas existencias</option><option value="status:out">Agotados</option></optgroup>
-          </select><span class="inventory-count-summary" id="inventory-count-summary" aria-live="polite"></span></div>
+          </select><select id="inventory-publisher-filter" aria-label="Filtrar inventario por editorial"><option value="all">Todas las editoriales</option></select><span class="inventory-count-summary" id="inventory-count-summary" aria-live="polite"></span></div>
           <div class="inventory-workspace">
             <div class="inventory-list-column">
               <div class="table-scroll" role="region" aria-label="Inventario de libros" tabindex="0"><table><thead><tr><th>Libro</th><th>Tema</th><th>Zona</th><th>Total</th><th>Disponibles</th><th>Acciones</th></tr></thead><tbody id="inventory-body"></tbody></table></div>
@@ -88,7 +88,7 @@
           </div>
         </div>
         <div class="management-panel" id="panel-loans" role="tabpanel" hidden>
-          <div class="panel-toolbar"><div><h3>Préstamos y devoluciones</h3><p>Solicitudes pendientes enviadas por estudiantes.</p></div><div class="row-actions"><span class="pending-requests-label">Solicitudes pendientes <span class="activity-count" id="pending-request-count">0</span></span><button class="action-button" id="add-loan" type="button">＋ Nuevo préstamo</button></div></div>
+          <div class="panel-toolbar"><div><h3>Préstamos y devoluciones</h3><p>Solicitudes pendientes enviadas por estudiantes.</p></div><div class="row-actions"><span class="pending-requests-label">Solicitudes pendientes <span class="activity-count" id="pending-request-count">0</span></span><button class="secondary-button" id="scan-return" type="button">Escanear devolución</button><button class="action-button" id="add-loan" type="button">＋ Nuevo préstamo</button></div></div>
           <div class="table-tools"><input id="loan-search" type="search" placeholder="Buscar por usuario o libro"></div>
           <div class="table-scroll" role="region" aria-label="Préstamos, devoluciones y solicitudes" tabindex="0"><table><thead><tr><th>Solicitante</th><th>Libro</th><th>Movimiento</th><th>Fecha</th><th>Fecha límite</th><th>Ticket</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="loans-body"></tbody></table></div>
           <p class="module-empty" id="loans-empty" hidden>No hay solicitudes pendientes.</p>
@@ -126,6 +126,18 @@
       <button class="dialog-close" id="management-dialog-close" type="button" aria-label="Cerrar">×</button>
       <h2 id="management-dialog-title">Formulario</h2><form id="management-form"></form>
     </dialog>
+    <dialog class="management-dialog return-scan-dialog" id="return-scan-dialog" aria-labelledby="return-scan-heading">
+      <button class="dialog-close" id="return-scan-close" type="button" aria-label="Cerrar escáner">×</button>
+      <h2 id="return-scan-heading">Registrar devolución</h2>
+      <p>Escanea el código de barras del ticket o libro. Si hay varios préstamos activos con ese ISBN, selecciona el que corresponde.</p>
+      <div class="return-scan-controls">
+        <label class="form-field" for="return-scan-isbn">ISBN escaneado o escrito<input id="return-scan-isbn" type="text" inputmode="numeric" autocomplete="off" maxlength="20"></label>
+        <div class="isbn-lookup-actions"><button class="secondary-button" id="return-scan-camera-start" type="button">Usar cámara</button><button class="action-button" id="return-scan-search" type="button">Buscar préstamos</button></div>
+        <p class="isbn-lookup-status" id="return-scan-status" role="status" aria-live="polite"></p>
+        <div class="isbn-camera" id="return-scan-camera" hidden><video id="return-scan-video" playsinline muted></video><button class="secondary-button" id="return-scan-camera-stop" type="button">Detener cámara</button></div>
+        <div class="return-scan-matches" id="return-scan-matches"></div>
+      </div>
+    </dialog>
     <dialog class="delete-confirm-dialog" id="delete-confirm-dialog" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-description">
       <button class="dialog-close" id="delete-confirm-close" type="button" aria-label="Cerrar">×</button>
       <span class="dialog-eyebrow">Confirmar eliminación</span>
@@ -156,6 +168,7 @@
           <div id="ticket-return-status-field" hidden><dt>Plazo</dt><dd id="ticket-return-status"></dd></div>
           <div id="ticket-comment-field" hidden><dt>Comentario eliminado</dt><dd id="ticket-comment"></dd></div>
         </dl>
+        <div id="ticket-isbn-barcode" class="ticket-barcode" hidden></div>
       </div>
       <button class="action-button ticket-print-button" id="ticket-print" type="button">Imprimir ticket</button>
     </dialog>

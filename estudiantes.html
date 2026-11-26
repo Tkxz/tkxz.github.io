@@ -10,12 +10,12 @@
     <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-student") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Estudiantes | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=student-desktop-return-1" />
+    <link rel="stylesheet" href="styles.css?v=publisher-year-filter-5" />
     <link rel="stylesheet" href="design-overrides.css?v=student-desktop-only-2" />
     <script src="data.js" defer></script>
     <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-webp-1" defer></script>
     <script src="local.js?v=reading-metrics-book-zones-2" defer></script>
-    <script src="script.js?v=student-desktop-return-1" defer></script>
+    <script src="script.js?v=publisher-year-filter-5" defer></script>
   </head>
   <body data-role="student">
     <header class="site-header">
@@ -64,6 +64,7 @@
           <div class="filter-list" role="group" aria-label="Filtrar libros por categoría">
             <button class="filter-chip selected" type="button" data-category="Todos">Todos <span>0</span></button>
           </div>
+          <label class="publisher-filter-control"><span>Editorial</span><select id="publisher-filter" aria-label="Filtrar libros por editorial"><option value="all">Todas las editoriales</option></select></label>
           <label class="search-box">
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <circle cx="8.7" cy="8.7" r="5.7"></circle>
@@ -85,7 +86,7 @@
         <div class="catalog-scroll" id="catalog-scroll" tabindex="0" role="region" aria-label="Listado de libros">
           <div class="book-grid" id="book-grid" aria-live="polite"></div>
         </div>
-        <p class="empty-state" id="empty-state" hidden>No encontramos libros con esa búsqueda. Prueba con otro título o categoría.</p>
+        <p class="empty-state" id="empty-state" hidden>No encontramos libros con esa búsqueda. Prueba con otro título, categoría o editorial.</p>
         <nav class="catalog-pagination" id="catalog-pagination" aria-label="Paginación del catálogo" hidden>
           <button class="catalog-page-button" type="button" data-page="previous" aria-label="Página anterior">Anterior</button>
           <span class="catalog-page-status" id="catalog-page-status" aria-live="polite"></span>
@@ -208,6 +209,7 @@
           <div id="ticket-return-status-field" hidden><dt>Plazo</dt><dd id="ticket-return-status"></dd></div>
           <div id="ticket-comment-field" hidden><dt>Comentario eliminado</dt><dd id="ticket-comment"></dd></div>
         </dl>
+        <div id="ticket-isbn-barcode" class="ticket-barcode" hidden></div>
       </div>
       <button class="action-button ticket-print-button" id="ticket-print" type="button">Imprimir ticket</button>
     </dialog>

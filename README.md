@@ -25,3 +25,23 @@ La lista de préstamos en administración muestra solo préstamos vigentes y sol
 En el panel del estudiante, los préstamos devueltos se identifican como libros leídos. El contador de libros leídos muestra los títulos únicos y permite volver a solicitar cualquier libro que siga en el catálogo y tenga ejemplares disponibles.
 
 Este modo es solo para desarrollo y pruebas: las páginas y los datos del navegador no están protegidos para producción. No uses información personal. La autenticación, el servidor y la base de datos se incorporarán más adelante.
+
+## API del catálogo histórico CRA
+
+La carpeta `api` contiene un servicio HTTP que consulta el archivo público del Catálogo Histórico de Bibliotecas Escolares CRA publicado por Mineduc. El catálogo incluye registros bibliográficos hasta 2025; no corresponde al inventario privado ni a los préstamos de un establecimiento en SGB-CRA.
+
+Para iniciar el servicio, entra a `api`, ejecuta `npm install` y luego `npm start`. El servidor escucha en `http://localhost:3000` (puedes cambiar el puerto con la variable `PORT`). La primera consulta descarga el Excel oficial y lo mantiene en memoria por 24 horas.
+
+Endpoints:
+
+- `GET /api/libros/{isbn}`: busca un ISBN de 10 o 13 caracteres; también acepta guiones y espacios.
+- `GET /api/libros?isbn={isbn}`: la misma búsqueda mediante query string.
+- `GET /api/health`: estado del servicio y fecha de la última carga del catálogo.
+
+La respuesta contiene `cantidad`, `libros` (con las columnas bibliográficas del Excel) y `fuente`. Cada resultado indica `isbnSolicitado`, `isbnCoincidente` y si fue una coincidencia exacta o por ISBN alternativo. Por ejemplo, la ficha digital `9788427725577` también se busca como la edición impresa CRA `9788427725560`. Si no aparece ningún ISBN exacto o alternativo configurado, `cantidad` será `0` y `libros` estará vacío. Ejemplo: `http://localhost:3000/api/libros/9789560000000`.
+
+En administración, el formulario **Registrar libro** permite escanear el código con la cámara o buscar el ISBN escrito/introducido por un lector USB. El ticket de préstamo imprime un código EAN-13 generado desde el ISBN; desde **Préstamos y devoluciones → Escanear devolución**, administración puede escanearlo y seleccionar el préstamo activo que corresponda. Si hay varios préstamos del mismo ISBN, la pantalla permite elegir al estudiante correcto antes de registrar la devolución.
+
+Las fichas muestran editorial y año de edición cuando están registrados. Administración puede filtrar el catálogo estudiantil y su inventario por editorial, y editar el año en la ficha del libro. Los registros antiguos sin año muestran “sin registrar” hasta que el equipo agregue el dato.
+
+Para usar la cámara, sirve la carpeta del proyecto desde localhost: en la raíz ejecuta `python -m http.server 8000` y abre `http://localhost:8000/admin.html`. El navegador solicitará permiso para usar la cámara. Si no tiene `BarcodeDetector`, la app carga el lector ZXing desde un CDN, por lo que necesita conexión a internet; si la descarga falla, puedes usar un lector USB o ingresar el ISBN manualmente. La API CRA debe estar iniciada para buscar datos bibliográficos; el registro de devolución usa los préstamos locales de la app.
