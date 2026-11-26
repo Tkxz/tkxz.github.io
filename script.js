@@ -759,6 +759,7 @@ let studentActivityMode = "history";
 let selectedSummaryPanel = "read";
 let studentPanelInitialized = false;
 let selectedStudentKey = "";
+let studentDirectoryView = "list";
 let localApp;
 const NAV_ACTIVATION_OFFSET = 48;
 
@@ -1067,6 +1068,7 @@ function renderStudentDirectory() {
     .sort((a, b) => a.name.localeCompare(b.name, "es") || a.key.localeCompare(b.key));
   const selected = filtered.find((student) => student.key === selectedStudentKey) || filtered[0];
   selectedStudentKey = selected?.key || "";
+  $("#estudiantes")?.classList.toggle("is-profile-open", Boolean(selected) && studentDirectoryView === "profile");
 
   $("#student-directory-list").innerHTML = filtered.map((student) => {
     const activeLoans = student.loans.filter((loan) => loan.status !== "Devuelto").length;
@@ -2616,7 +2618,14 @@ function bindUI() {
     const button = event.target.closest("[data-student-key]");
     if (!button) return;
     selectedStudentKey = button.dataset.studentKey;
+    studentDirectoryView = "profile";
     renderStudentDirectory();
+  });
+  $("#student-profile-back")?.addEventListener("click", () => {
+    studentDirectoryView = "list";
+    renderStudentDirectory();
+    $("#estudiantes").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("#student-directory-search")?.focus({ preventScroll: true });
   });
   document.addEventListener("error", (event) => {
     const image = event.target;

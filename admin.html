@@ -10,12 +10,12 @@
     <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-admin") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Administración | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=loan-status-colors-1" />
+    <link rel="stylesheet" href="styles.css?v=student-profile-switch-1" />
     <link rel="stylesheet" href="design-overrides.css?v=mobile-admin-navigation-1" />
     <script src="data.js?v=no-ticket-barcode-1" defer></script>
     <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-webp-1" defer></script>
     <script src="local.js?v=admin-student-directory-1" defer></script>
-    <script src="script.js?v=mobile-admin-navigation-1" defer></script>
+    <script src="script.js?v=student-profile-switch-1" defer></script>
   </head>
   <body data-role="admin">
     <header class="site-header">
@@ -135,7 +135,7 @@
           <section class="student-profile" id="student-profile" aria-live="polite">
             <div class="student-profile-empty" id="student-profile-empty">Selecciona un estudiante para ver su actividad.</div>
             <div class="student-profile-content" id="student-profile-content" hidden>
-              <div class="student-profile-heading"><div><span class="student-directory-eyebrow">Perfil de actividad</span><h3 id="student-profile-name"></h3><p id="student-profile-identifier"></p></div></div>
+              <div class="student-profile-heading"><div><span class="student-directory-eyebrow">Perfil de actividad</span><h3 id="student-profile-name"></h3><p id="student-profile-identifier"></p></div><button class="student-profile-back" id="student-profile-back" type="button">← Buscar alumnos</button></div>
               <div class="student-profile-stats" id="student-profile-stats"></div>
               <div class="student-profile-sections">
                 <section><div class="student-profile-section-heading"><h4>Libros</h4><span id="student-profile-books-count"></span></div><div id="student-profile-books"></div><p class="student-profile-empty-list" id="student-profile-books-empty" hidden>Este estudiante aún no tiene préstamos registrados.</p></section>
