@@ -396,7 +396,8 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .stock-number.danger { color: #b45d4f; }
 .status-pill { display: inline-block; padding: 5px 8px; border-radius: 20px; background: #edf3ed; color: #42684d; font-size: 8px; }
 .status-pill.overdue { background: #faeae5; color: #a64d3e; }
-.status-pill.returned { background: #efefe9; color: #777d74; }
+.status-pill.pending { background: #fff3cf; color: #8a6200; }
+.status-pill.returned { background: #e4f3e7; color: #287342; }
 .module-empty { padding: 30px 10px; color: #8b9189; font-size: 11px; text-align: center; }
 .review-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .review-card { padding: 17px; border: 1px solid var(--line); background: var(--white); }
@@ -1042,7 +1043,8 @@ button:active {
 :root[data-theme="dark"] .table-scroll td strong { color: #e8ede9; }
 :root[data-theme="dark"] .status-pill { background: #303832; color: #c4cec6; }
 :root[data-theme="dark"] .status-pill.overdue { background: #4a302c; color: #f0b4a8; }
-:root[data-theme="dark"] .status-pill.returned { background: #303832; color: #bdc5bf; }
+:root[data-theme="dark"] .status-pill.pending { background: #50442a; color: #f3d37b; }
+:root[data-theme="dark"] .status-pill.returned { background: #294638; color: #a9e2b8; }
 :root[data-theme="dark"] .read-badge,
 :root[data-theme="dark"] #pending-request-count { background: #303832; color: #c4cec6; }
 :root[data-theme="dark"] .action-button,

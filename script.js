@@ -1618,8 +1618,9 @@ function closeInventoryDetail() {
 }
 
 function statusPill(status) {
-  const style = { Rechazada: "overdue", Vencido: "overdue", Aprobada: "returned", Devuelto: "returned" };
-  return `<span class="status-pill ${style[status] || "active"}">${escapeHTML(status)}</span>`;
+  const style = { Rechazada: "overdue", Vencido: "overdue", Pendiente: "pending", Aprobada: "returned", Devuelto: "returned" };
+  const label = status === "Vencido" ? "Fuera de plazo" : status;
+  return `<span class="status-pill ${style[status] || "active"}">${escapeHTML(label)}</span>`;
 }
 
 function renderLoans() {
