@@ -1101,7 +1101,10 @@ function renderStudentDirectory() {
     ["Reseñas", selected.reviews.length],
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
 
-  const books = [...selected.loans].sort((a, b) => String(b.loanDate || "").localeCompare(String(a.loanDate || "")));
+  const loanPriority = { Vencido: 1, Activo: 2, Devuelto: 4 };
+  const books = [...selected.loans].sort((a, b) => (loanPriority[a.status] || 4) - (loanPriority[b.status] || 4)
+    || String(a.dueDate || "").localeCompare(String(b.dueDate || ""))
+    || String(b.loanDate || "").localeCompare(String(a.loanDate || "")));
   $("#student-profile-books").innerHTML = books.map((loan) => {
     const book = data.books.find((item) => String(item.id) === String(loan.bookId));
     const title = book?.title || loan.bookTitle || "Libro eliminado del catálogo";
@@ -1110,7 +1113,9 @@ function renderStudentDirectory() {
   $("#student-profile-books-count").textContent = String(books.length);
   $("#student-profile-books-empty").hidden = books.length > 0;
 
-  const requests = [...pendingRequests].sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  const requestPriority = { Pendiente: 3 };
+  const requests = [...pendingRequests].sort((a, b) => (requestPriority[a.status] || 5) - (requestPriority[b.status] || 5)
+    || String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   $("#student-profile-requests").innerHTML = requests.map((request) => {
     const book = data.books.find((item) => String(item.id) === String(request.bookId));
     const title = book?.title || request.bookTitle || "Libro eliminado del catálogo";
