@@ -190,6 +190,10 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`API CRA disponible en http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`API CRA disponible en http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { downloadCatalog, CATALOG_URL, ISBN_ALIASES };

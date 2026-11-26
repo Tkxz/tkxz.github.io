@@ -1,0 +1,54 @@
+name: Actualizar índice estático del catálogo CRA
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 7 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "api/server.js"
+      - "api/build-static-catalog.js"
+      - "api/package.json"
+      - "api/package-lock.json"
+      - ".github/workflows/update-cra-index.yml"
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  refresh-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener el repositorio
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - name: Instalar dependencias
+        run: npm ci --prefix api
+      - name: Descargar el catálogo y construir el índice
+        run: npm --prefix api run build:static
+      - name: Publicar el índice para GitHub Pages
+        id: publish-index
+        run: |
+          git add api/catalogo-cra.json
+          if git diff --cached --quiet; then
+            echo "El índice CRA no tuvo cambios."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Actualizar índice público del catálogo CRA"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Solicitar la actualización de GitHub Pages
+        if: steps.publish-index.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds"

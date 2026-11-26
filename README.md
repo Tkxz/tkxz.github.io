@@ -32,6 +32,8 @@ La carpeta `api` contiene un servicio HTTP que consulta el archivo público del 
 
 Para iniciar el servicio, entra a `api`, ejecuta `npm install` y luego `npm start`. El servidor escucha en `http://localhost:3000` (puedes cambiar el puerto con la variable `PORT`). La primera consulta descarga el Excel oficial y lo mantiene en memoria por 24 horas.
 
+En GitHub Pages no se puede ejecutar el servidor Node del directorio `api`. Allí las consultas usan `api/catalogo-cra.json`, un índice estático que el workflow de GitHub Actions genera y publica diariamente. También se puede actualizar manualmente desde **Actions → Actualizar índice estático del catálogo CRA → Run workflow**. La consulta devuelve los registros CRA incluidos en ese índice; para desarrollo local se sigue usando la API Node.
+
 Endpoints:
 
 - `GET /api/libros/{isbn}`: busca un ISBN de 10 o 13 caracteres; también acepta guiones y espacios.

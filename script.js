@@ -1899,6 +1899,67 @@ function craValue(record, terms) {
   return match?.[1] == null ? "" : String(match[1]).trim();
 }
 
+const CRA_ISBN_ALIASES = {
+  "9788427725577": ["9788427725560"],
+  "9788426409966": ["9788426418678", "9789871138630"],
+};
+let staticCraCatalogPromise;
+
+async function lookupCraISBN(value) {
+  const isbn = normalizeBookISBN(value);
+  const apiBaseOverride = globalThis.BIBLIOTECA_CRA_API_URL;
+  const localHost = ["localhost", "127.0.0.1", ""].includes(location.hostname);
+  if (apiBaseOverride || localHost) {
+    const apiBase = (apiBaseOverride || "http://localhost:3000").replace(/\/$/, "");
+    const response = await fetch(`${apiBase}/api/libros/${encodeURIComponent(isbn)}`);
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `La API respondió HTTP ${response.status}.`);
+    return result;
+  }
+
+  if (!staticCraCatalogPromise) {
+    const catalogURL = new URL(`./api/catalogo-cra.json?v=${Math.floor(Date.now() / 60000)}`, document.baseURI);
+    staticCraCatalogPromise = fetch(catalogURL, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) {
+          const message = response.status === 404
+            ? "El índice CRA aún no está publicado. Ejecuta el workflow de actualización en GitHub Actions y vuelve a intentar."
+            : `No se pudo cargar el índice CRA publicado (HTTP ${response.status}).`;
+          throw new Error(message);
+        }
+        return response.json();
+      }).catch((error) => {
+        staticCraCatalogPromise = null;
+        throw error;
+      });
+  }
+  const catalog = await staticCraCatalogPromise;
+  const queryIsbns = new Set([isbn, ...(catalog.isbnAliases?.[isbn] || CRA_ISBN_ALIASES[isbn] || [])]);
+  for (const [knownIsbn, aliases] of Object.entries(catalog.isbnAliases || CRA_ISBN_ALIASES)) {
+    if (aliases.includes(isbn)) queryIsbns.add(knownIsbn);
+  }
+  const matches = (catalog.records || []).filter((record) =>
+    (record.isbns || []).some((item) => queryIsbns.has(normalizeBookISBN(typeof item === "object" ? item.valor : item))));
+  const books = matches.map((record) => {
+    const foundIsbn = (record.isbns || []).map((item) => typeof item === "object" ? item.valor : item)
+      .find((item) => queryIsbns.has(normalizeBookISBN(item)));
+    const exact = normalizeBookISBN(foundIsbn) === isbn;
+    return {
+      isbnSolicitado: isbn,
+      isbnCoincidente: foundIsbn,
+      coincidenciaPor: exact ? "ISBN exacto" : "ISBN alternativo de la misma obra",
+      hoja: record.hoja,
+      ...(record.datos || {}),
+    };
+  });
+  return {
+    consulta: { isbn, isbnsAlternativosBuscados: [...queryIsbns].filter((item) => item !== isbn) },
+    cantidad: books.length,
+    libros: books,
+    fuente: catalog.fuente,
+  };
+}
+
 function bindIsbnLookup(form) {
   const input = form.querySelector('[name="isbn"]');
   const searchButton = form.querySelector("[data-isbn-search]");
@@ -1942,10 +2003,7 @@ function bindIsbnLookup(form) {
     searchButton.disabled = true;
     setStatus("Buscando en el catálogo CRA…", "loading");
     try {
-      const apiBase = (globalThis.BIBLIOTECA_CRA_API_URL || "http://localhost:3000").replace(/\/$/, "");
-      const response = await fetch(`${apiBase}/api/libros/${encodeURIComponent(isbn)}`);
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || `La API respondió HTTP ${response.status}.`);
+      const result = await lookupCraISBN(isbn);
       const record = result.libros?.[0];
       if (!record) {
         setStatus("No aparece en el catálogo CRA. Puedes completar los datos manualmente.", "error");
@@ -2145,10 +2203,7 @@ function bindAdminBarcodeScanner() {
     setStatus("Consultando el catálogo CRA…", "loading");
     results.replaceChildren();
     try {
-      const apiBase = (globalThis.BIBLIOTECA_CRA_API_URL || "http://localhost:3000").replace(/\/$/, "");
-      const response = await fetch(`${apiBase}/api/libros/${encodeURIComponent(isbn)}`);
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || `La API respondió HTTP ${response.status}.`);
+      const result = await lookupCraISBN(isbn);
       const records = Array.isArray(result.libros) ? result.libros : [];
       renderRecords(records, result, isbn);
       setStatus(records.length ? `${records.length} resultado(s) encontrado(s) para ISBN ${isbn}.` : `Sin resultados para ISBN ${isbn}.`, records.length ? "success" : "error");
