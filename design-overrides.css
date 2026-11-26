@@ -714,6 +714,22 @@
   #panel-inventory .inventory-theme { font-size: 10px; }
   #panel-inventory .row-actions { gap: 5px; }
   #panel-inventory .inventory-detail { border-radius: 16px; }
+  #panel-loans .table-scroll table { display: block; width: 100%; min-width: 0; }
+  #panel-loans .table-scroll thead { display: none; }
+  #panel-loans .table-scroll tbody { display: grid; gap: 8px; }
+  #panel-loans .table-scroll tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  #panel-loans .table-scroll td { min-width: 0; padding: 3px 0; border: 0; font-size: 11px; overflow-wrap: anywhere; }
+  #panel-loans .table-scroll td:nth-child(1), #panel-loans .table-scroll td:nth-child(2), #panel-loans .table-scroll td:nth-child(8) { grid-column: 1 / -1; }
+  #panel-loans .table-scroll td:nth-child(3), #panel-loans .table-scroll td:nth-child(4), #panel-loans .table-scroll td:nth-child(6) { display: none; }
+  #panel-loans .table-scroll td:nth-child(5)::before { content: "Límite: "; color: var(--muted); }
+  #panel-loans .row-actions { gap: 10px; }
+  #panel-audit .table-scroll table { min-width: 0; table-layout: fixed; }
+  #panel-audit .table-scroll th, #panel-audit .table-scroll td { padding: 8px 6px; font-size: 10px; overflow-wrap: anywhere; }
+  #panel-audit .table-scroll th { font-size: 8px; }
+  #panel-audit .table-scroll th:nth-child(4), #panel-audit .table-scroll td:nth-child(4),
+  #panel-audit .table-scroll th:nth-child(6), #panel-audit .table-scroll td:nth-child(6),
+  #panel-audit .table-scroll th:nth-child(7), #panel-audit .table-scroll td:nth-child(7),
+  #panel-audit .table-scroll th:nth-child(8), #panel-audit .table-scroll td:nth-child(8) { display: none; }
   :root[data-theme="dark"] .catalog-heading-mobile { color: #e3ebef; }
 }
 
