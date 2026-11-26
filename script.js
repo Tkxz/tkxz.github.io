@@ -2909,10 +2909,11 @@ function setupSectionNavigation() {
     window.removeEventListener("popstate", sectionNavigationUpdate);
   }
   const links = [...document.querySelectorAll(".main-nav .nav-link:not([hidden])")];
+  const adminMobileTabs = [...document.querySelectorAll(".admin-bottom-nav [data-admin-page]")];
   const mobileStudentLinks = [...document.querySelectorAll(".student-bottom-nav .nav-link[href^='#']")];
 
   const setActive = (id) => {
-    [...links, ...mobileStudentLinks].forEach((link) => {
+    [...links, ...adminMobileTabs, ...mobileStudentLinks].forEach((link) => {
       const target = link.dataset.adminPage || link.getAttribute("href")?.slice(1);
       const active = target === id;
       link.classList.toggle("active", active);
@@ -2928,7 +2929,6 @@ function setupSectionNavigation() {
   const studentsPage = $("#estudiantes");
   if (pageRole === "admin" && managementPage && studentsPage) {
     const pages = [managementPage, studentsPage];
-    const tabs = [...document.querySelectorAll("#main-nav [data-admin-page]")];
     const activateAdminPage = (pageId = location.hash.slice(1), updateHistory = false) => {
       if (typeof pageId !== "string") pageId = location.hash.slice(1);
       const currentPage = pages.find((page) => page.id === pageId) || managementPage;
@@ -2938,20 +2938,23 @@ function setupSectionNavigation() {
       if (location.hash !== `#${currentPage.id}`) history.replaceState(null, "", `#${currentPage.id}`);
     };
 
-    $("#main-nav")?.addEventListener("click", (event) => {
-      const tab = event.target.closest("[data-admin-page]");
-      if (!tab) return;
-      activateAdminPage(tab.dataset.adminPage, true);
-    });
-    $("#main-nav")?.addEventListener("keydown", (event) => {
-      const currentIndex = tabs.indexOf(event.target.closest("[data-admin-page]"));
-      if (currentIndex < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-      event.preventDefault();
-      const nextIndex = event.key === "Home" ? 0
-        : event.key === "End" ? tabs.length - 1
-          : (currentIndex + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
-      tabs[nextIndex].focus();
-      tabs[nextIndex].click();
+    [$("#main-nav"), $("#admin-bottom-nav")].filter(Boolean).forEach((tablist) => {
+      tablist.addEventListener("click", (event) => {
+        const tab = event.target.closest("[data-admin-page]");
+        if (!tab) return;
+        activateAdminPage(tab.dataset.adminPage, true);
+      });
+      tablist.addEventListener("keydown", (event) => {
+        const tabs = [...tablist.querySelectorAll("[data-admin-page]:not([hidden])")];
+        const currentIndex = tabs.indexOf(event.target.closest("[data-admin-page]"));
+        if (currentIndex < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const nextIndex = event.key === "Home" ? 0
+          : event.key === "End" ? tabs.length - 1
+            : (currentIndex + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+        tabs[nextIndex].focus();
+        tabs[nextIndex].click();
+      });
     });
     sectionNavigationUpdate = activateAdminPage;
     window.addEventListener("popstate", sectionNavigationUpdate);

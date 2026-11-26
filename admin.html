@@ -11,11 +11,11 @@
     <script>try { if (localStorage.getItem("biblioteca-theme-admin") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Administración | Biblioteca Escolar JMC</title>
     <link rel="stylesheet" href="styles.css?v=loan-status-colors-1" />
-    <link rel="stylesheet" href="design-overrides.css?v=inventory-action-contrast-1" />
+    <link rel="stylesheet" href="design-overrides.css?v=mobile-admin-navigation-1" />
     <script src="data.js?v=no-ticket-barcode-1" defer></script>
     <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-webp-1" defer></script>
     <script src="local.js?v=admin-student-directory-1" defer></script>
-    <script src="script.js?v=loan-status-colors-1" defer></script>
+    <script src="script.js?v=mobile-admin-navigation-1" defer></script>
   </head>
   <body data-role="admin">
     <header class="site-header">
@@ -148,6 +148,15 @@
       </section>
 
     </main>
+
+    <nav class="admin-bottom-nav" id="admin-bottom-nav" role="tablist" aria-label="Navegación de administración en el teléfono">
+      <button class="nav-link active" id="admin-mobile-management-nav" type="button" role="tab" aria-selected="true" aria-controls="gestion" data-admin-page="gestion">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V5.5A1.5 1.5 0 0 1 5.5 4H20v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Administración</span>
+      </button>
+      <button class="nav-link" id="admin-mobile-students-nav" type="button" role="tab" aria-selected="false" aria-controls="estudiantes" data-admin-page="estudiantes" data-admin-only>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19v-1a5.5 5.5 0 0 1 11 0v1zM16 5.2a3.1 3.1 0 0 1 0 5.9M17 13.2a5 5 0 0 1 3.5 4.8v1h-4"/></svg><span>Estudiantes</span>
+      </button>
+    </nav>
 
     <dialog class="management-dialog" id="management-dialog" aria-labelledby="management-dialog-title">
       <button class="dialog-close" id="management-dialog-close" type="button" aria-label="Cerrar">×</button>
