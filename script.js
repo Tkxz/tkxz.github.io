@@ -2919,6 +2919,25 @@ function setupSectionNavigation() {
     });
   };
 
+  const managementPage = $("#gestion");
+  const studentsPage = $("#estudiantes");
+  if (pageRole === "admin" && managementPage && studentsPage) {
+    const pages = [managementPage, studentsPage];
+    const activateAdminPage = () => {
+      const currentPage = pages.find((page) => page.id === location.hash.slice(1)) || managementPage;
+      pages.forEach((page) => { page.hidden = page !== currentPage; });
+      setActive(currentPage.id);
+      if (location.hash !== `#${currentPage.id}`) history.replaceState(null, "", `#${currentPage.id}`);
+      window.scrollTo(0, 0);
+    };
+
+    sectionNavigationUpdate = activateAdminPage;
+    window.addEventListener("hashchange", sectionNavigationUpdate);
+    window.addEventListener("popstate", sectionNavigationUpdate);
+    activateAdminPage();
+    return;
+  }
+
   const libraryPage = $("#biblioteca");
   const studentPanelPage = $("#panel-estudiante");
   if (pageRole === "student" && libraryPage && studentPanelPage) {
