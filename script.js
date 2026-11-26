@@ -2623,6 +2623,7 @@ function bindUI() {
   });
   $("#student-profile-back")?.addEventListener("click", () => {
     studentDirectoryView = "list";
+    selectedStudentKey = "";
     renderStudentDirectory();
     $("#estudiantes").scrollIntoView({ behavior: "smooth", block: "start" });
     $("#student-directory-search")?.focus({ preventScroll: true });
