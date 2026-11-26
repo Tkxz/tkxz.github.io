@@ -125,19 +125,19 @@
   }
 
   function publicLoan(loan, today) {
-    const { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId, returnTicketId } = loan;
+    const { id, user, studentId, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId, returnTicketId } = loan;
     const status = isReturned(loan) ? "Devuelto" : dueDate < today ? "Vencido" : "Activo";
-    return { id, user, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId, returnTicketId, status };
+    return { id, user, studentId, bookId, bookTitle, loanDate, dueDate, returnedAt, ticketId, returnTicketId, status };
   }
 
   function publicRequest(request) {
-    const { id, type, student, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested, ticketId } = request;
-    return { id, type, student, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested: type === "loan" ? true : Boolean(ticketRequested), ticketId };
+    const { id, type, student, studentId, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested, ticketId } = request;
+    return { id, type, student, studentId, bookId, bookTitle, loanId, status, createdAt, dueDate, ticketRequested: type === "loan" ? true : Boolean(ticketRequested), ticketId };
   }
 
   function publicReview(review, actor) {
     const { id, user, bookId, bookTitle, rating, comment, createdAt, updatedAt } = review;
-    return { id, user, bookId, bookTitle, rating, comment, createdAt, updatedAt, own: review.ownerId === actor.id };
+    return { id, user, studentId: review.ownerId, bookId, bookTitle, rating, comment, createdAt, updatedAt, own: review.ownerId === actor.id };
   }
 
   function requireRole(actor, ...roles) {

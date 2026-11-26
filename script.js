@@ -758,6 +758,7 @@ let renderVersion = 0;
 let studentActivityMode = "history";
 let selectedSummaryPanel = "read";
 let studentPanelInitialized = false;
+let selectedStudentKey = "";
 let localApp;
 const NAV_ACTIVATION_OFFSET = 48;
 
@@ -1040,6 +1041,92 @@ function renderAdminAnalytics() {
     `<article class="analytics-card"><span>Top estudiantes · reseñas</span>${studentList(topStudents(studentReviewCounts), "Sin reseñas publicadas.")}</article>`,
   ];
   $("#admin-analytics-grid").innerHTML = cards.join("");
+}
+
+function renderStudentDirectory() {
+  const students = new Map();
+  const addActivity = (record, kind, nameValue, dateValue) => {
+    const name = String(nameValue || "Estudiante").trim() || "Estudiante";
+    const id = String(record.studentId || "").trim();
+    const normalizedName = name.toLocaleLowerCase("es").replace(/\s+/g, " ");
+    const key = id ? `id:${id}` : `name:${normalizedName}`;
+    if (!students.has(key)) students.set(key, { key, id, name, loans: [], requests: [], reviews: [], latest: "" });
+    const student = students.get(key);
+    if (student.name === "Estudiante" && name !== "Estudiante") student.name = name;
+    student[kind].push(record);
+    if (dateValue && dateValue > student.latest) student.latest = dateValue;
+  };
+
+  data.loans.forEach((loan) => addActivity(loan, "loans", loan.user, loan.loanDate));
+  data.requests.forEach((request) => addActivity(request, "requests", request.student, request.createdAt));
+  data.reviews.forEach((review) => addActivity(review, "reviews", review.user, review.updatedAt || review.createdAt));
+
+  const query = $("#student-directory-search")?.value.trim().toLocaleLowerCase("es") || "";
+  const filtered = [...students.values()]
+    .filter((student) => `${student.name} ${student.id}`.toLocaleLowerCase("es").includes(query))
+    .sort((a, b) => a.name.localeCompare(b.name, "es") || a.key.localeCompare(b.key));
+  const selected = filtered.find((student) => student.key === selectedStudentKey) || filtered[0];
+  selectedStudentKey = selected?.key || "";
+
+  $("#student-directory-list").innerHTML = filtered.map((student) => {
+    const activeLoans = student.loans.filter((loan) => loan.status !== "Devuelto").length;
+    const pendingRequests = student.requests.filter((request) => request.status === "Pendiente").length;
+    return `<button class="student-directory-item${student.key === selectedStudentKey ? " selected" : ""}" type="button" role="option" aria-selected="${student.key === selectedStudentKey}" data-student-key="${escapeHTML(student.key)}"><span class="student-directory-avatar" aria-hidden="true">${escapeHTML(student.name.slice(0, 1).toLocaleUpperCase("es"))}</span><span class="student-directory-item-copy"><strong>${escapeHTML(student.name)}</strong><small>${student.id ? `ID ${escapeHTML(student.id)}` : "Sin identificador de cuenta"}</small></span><span class="student-directory-item-count">${activeLoans + pendingRequests}</span></button>`;
+  }).join("");
+  $("#student-directory-empty").hidden = filtered.length > 0;
+
+  const empty = $("#student-profile-empty");
+  const profile = $("#student-profile-content");
+  if (!selected) {
+    empty.textContent = students.size ? "No se encontraron estudiantes con esa búsqueda." : "Aún no hay actividad asociada a estudiantes.";
+    empty.hidden = false;
+    profile.hidden = true;
+    return;
+  }
+
+  empty.hidden = true;
+  profile.hidden = false;
+  $("#student-profile-name").textContent = selected.name;
+  $("#student-profile-identifier").textContent = selected.id
+    ? `Identificador registrado: ${selected.id}`
+    : "Perfil agrupado por nombre; no tiene identificador de cuenta individual.";
+
+  const activeLoans = selected.loans.filter((loan) => loan.status !== "Devuelto");
+  const pendingRequests = selected.requests.filter((request) => request.status === "Pendiente");
+  $("#student-profile-stats").innerHTML = [
+    ["Libros prestados", activeLoans.length],
+    ["Solicitudes pendientes", pendingRequests.length],
+    ["Reseñas", selected.reviews.length],
+  ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+
+  const books = [...selected.loans].sort((a, b) => String(b.loanDate || "").localeCompare(String(a.loanDate || "")));
+  $("#student-profile-books").innerHTML = books.map((loan) => {
+    const book = data.books.find((item) => String(item.id) === String(loan.bookId));
+    const title = book?.title || loan.bookTitle || "Libro eliminado del catálogo";
+    return `<article class="student-activity-row"><div><strong>${escapeHTML(title)}</strong><small>Préstamo: ${escapeHTML(formatDate(loan.loanDate))} · Vence: ${escapeHTML(formatDate(loan.dueDate))}</small></div>${statusPill(loan.status)}</article>`;
+  }).join("");
+  $("#student-profile-books-count").textContent = String(books.length);
+  $("#student-profile-books-empty").hidden = books.length > 0;
+
+  const requests = [...pendingRequests].sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  $("#student-profile-requests").innerHTML = requests.map((request) => {
+    const book = data.books.find((item) => String(item.id) === String(request.bookId));
+    const title = book?.title || request.bookTitle || "Libro eliminado del catálogo";
+    const movement = request.type === "return" ? "Devolución" : "Préstamo";
+    return `<article class="student-activity-row"><div><strong>${escapeHTML(title)}</strong><small>${movement} · ${escapeHTML(formatDate(request.createdAt))}</small></div>${statusPill(request.status)}</article>`;
+  }).join("");
+  $("#student-profile-requests-count").textContent = String(requests.length);
+  $("#student-profile-requests-empty").hidden = requests.length > 0;
+
+  const reviews = [...selected.reviews].sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
+  $("#student-profile-reviews").innerHTML = reviews.map((review) => {
+    const book = data.books.find((item) => String(item.id) === String(review.bookId));
+    const title = book?.title || review.bookTitle || "Libro eliminado del catálogo";
+    const rating = Math.max(0, Math.min(5, Number(review.rating) || 0));
+    return `<article class="student-profile-review"><div><strong>${escapeHTML(title)}</strong><span class="review-stars" aria-label="${rating} de 5 estrellas">${"★".repeat(rating)}${"☆".repeat(5 - rating)}</span></div><p>${escapeHTML(review.comment)}</p><small>${escapeHTML(formatDate(review.updatedAt || review.createdAt))}</small></article>`;
+  }).join("");
+  $("#student-profile-reviews-count").textContent = String(reviews.length);
+  $("#student-profile-reviews-empty").hidden = reviews.length > 0;
 }
 
 function ratingSummary(bookId) {
@@ -1821,6 +1908,7 @@ function renderAll() {
   if (data.user.role === "admin") {
     renderStats();
     renderAdminAnalytics();
+    renderStudentDirectory();
     renderInventory();
     renderLoans();
   }
@@ -2522,6 +2610,13 @@ function addReview(review, selectedBookId) {
 
 function bindUI() {
   bindAdminBarcodeScanner();
+  $("#student-directory-search")?.addEventListener("input", renderStudentDirectory);
+  $("#student-directory-list")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-student-key]");
+    if (!button) return;
+    selectedStudentKey = button.dataset.studentKey;
+    renderStudentDirectory();
+  });
   document.addEventListener("error", (event) => {
     const image = event.target;
     if (!(image instanceof HTMLImageElement) || image.dataset.bookCoverImage !== "true") return;
