@@ -730,6 +730,9 @@
   #panel-audit .table-scroll th:nth-child(6), #panel-audit .table-scroll td:nth-child(6),
   #panel-audit .table-scroll th:nth-child(7), #panel-audit .table-scroll td:nth-child(7),
   #panel-audit .table-scroll th:nth-child(8), #panel-audit .table-scroll td:nth-child(8) { display: none; }
+  #panel-audit .audit-mobile-ticket { display: block; margin-top: 4px; }
+  #panel-audit .audit-mobile-ticket .table-action { min-height: 28px; padding: 2px 8px; border: 1px solid #bfd0d7; border-radius: 6px; background: #fff; color: #155875; font-size: 10px; font-weight: 700; }
+  :root[data-theme="dark"] #panel-audit .audit-mobile-ticket .table-action { border-color: #405965; background: #1b2932; color: #bdd8e2; }
   :root[data-theme="dark"] .catalog-heading-mobile { color: #e3ebef; }
 }
 

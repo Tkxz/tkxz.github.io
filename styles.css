@@ -376,6 +376,7 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .table-tools select { min-width: 160px; }
 .inventory-book-cell { display: flex; align-items: center; gap: 9px; min-width: 210px; }
 .inventory-mobile-actions { display: none; }
+.audit-mobile-ticket { display: none; }
 .inventory-book-copy { display: grid; gap: 2px; min-width: 0; }
 .inventory-book-copy strong, .inventory-book-copy small { overflow-wrap: anywhere; }
 .inventory-book-copy small:last-child, .inventory-edition { color: var(--muted); font-size: 10px; }

@@ -1949,12 +1949,13 @@ async function loadHistory() {
         ? data.loans.find((loan) => loan.id === details.loanId)
         : null;
       const ticket = details?.ticketType === "return" && returnTicketLoan
-        ? `<button class="table-action" type="button" data-view-return-ticket="${escapeHTML(returnTicketLoan.id)}">${escapeHTML(details.ticketId)}</button>`
+        ? `<button class="table-action" type="button" data-view-return-ticket="${escapeHTML(returnTicketLoan.id)}">Ver ticket</button>`
         : details?.ticketId
-          ? `<button class="table-action" type="button" data-view-review-ticket="${escapeHTML(id)}">${escapeHTML(details.ticketId)}</button>`
+          ? `<button class="table-action" type="button" data-view-review-ticket="${escapeHTML(id)}">Ver ticket</button>`
           : ticketLoan?.ticketId
-        ? `<button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">${escapeHTML(ticketLoan.ticketId)}</button>`
+        ? `<button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">Ver ticket</button>`
         : "—";
+      const mobileTicket = ticket === "—" ? "" : `<span class="audit-mobile-ticket">${ticket}</span>`;
       const legacyStudentName = /^Reseña de (.+?)(?: sobre «|$)/.exec(target.label)?.[1];
       const studentName = action === "Eliminar reseña" ? details?.studentName || legacyStudentName || "—" : "—";
       const deletedComment = action === "Eliminar reseña" && details?.comment
@@ -1962,7 +1963,7 @@ async function loadHistory() {
         : "";
       return `<tr>
       <td><time datetime="${escapeHTML(at)}">${dateTime.format(new Date(at))}</time></td>
-      <td>${escapeHTML(action)}</td><td>${escapeHTML(target.label)}${deletedComment}<small>${escapeHTML(target.id)}</small></td><td>${ticket}</td><td>${escapeHTML(studentName)}</td>
+      <td>${escapeHTML(action)}</td><td>${escapeHTML(target.label)}${deletedComment}<small>${escapeHTML(target.id)}</small>${mobileTicket}</td><td>${ticket}</td><td>${escapeHTML(studentName)}</td>
       <td>${escapeHTML(actor.name)}</td><td>${escapeHTML(roleNames[actor.role] || actor.role)}</td><td>${escapeHTML(actor.identifier || "—")}</td>
     </tr>`;
     }).join("");
