@@ -10,12 +10,12 @@
     <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-admin") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Administración | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=admin-student-directory-1" />
+    <link rel="stylesheet" href="styles.css?v=selectable-admin-tabs-1" />
     <link rel="stylesheet" href="design-overrides.css?v=inventory-action-contrast-1" />
     <script src="data.js?v=no-ticket-barcode-1" defer></script>
     <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-webp-1" defer></script>
     <script src="local.js?v=admin-student-directory-1" defer></script>
-    <script src="script.js?v=admin-student-panels-1" defer></script>
+    <script src="script.js?v=selectable-admin-tabs-1" defer></script>
   </head>
   <body data-role="admin">
     <header class="site-header">
@@ -35,9 +35,9 @@
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9.25"/><circle cx="12" cy="9" r="2.75"/><path d="M6.8 18c.75-2.35 2.4-3.55 5.2-3.55s4.45 1.2 5.2 3.55"/></svg>
         </button>
       </div>
-      <nav class="main-nav admin-nav" id="main-nav" aria-label="Navegación de administración">
-        <a class="nav-link active" id="management-nav" href="#gestion" aria-current="location">Administración</a>
-        <a class="nav-link" id="students-nav" href="#estudiantes" data-admin-only>Estudiantes</a>
+      <nav class="main-nav admin-nav" id="main-nav" role="tablist" aria-label="Paneles de administración">
+        <button class="nav-link active" id="management-nav" type="button" role="tab" aria-selected="true" aria-controls="gestion" data-admin-page="gestion">Administración</button>
+        <button class="nav-link" id="students-nav" type="button" role="tab" aria-selected="false" aria-controls="estudiantes" data-admin-page="estudiantes" data-admin-only>Estudiantes</button>
       </nav>
     </header>
     <main id="app-main">
@@ -50,7 +50,7 @@
           <div class="loading-table"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
       </div>
-      <section class="management-section section-wrap" id="gestion" hidden>
+      <section class="management-section section-wrap" id="gestion" role="tabpanel" aria-labelledby="management-nav" hidden>
         <div class="section-heading">
           <div><div class="eyebrow"><span class="eyebrow-dot"></span> <span id="management-kicker">Administración bibliotecaria</span></div><h2 id="management-heading">Gestión de <em>la colección.</em></h2></div>
         </div>
@@ -121,7 +121,7 @@
         </div>
       </section>
 
-      <section class="student-directory-section section-wrap" id="estudiantes" data-admin-only hidden aria-labelledby="students-heading">
+      <section class="student-directory-section section-wrap" id="estudiantes" role="tabpanel" aria-labelledby="students-heading" data-admin-only hidden>
         <div class="student-directory-heading">
           <div><span class="student-directory-eyebrow">Comunidad escolar</span><h2 id="students-heading">Estudiantes</h2><p>Busca un estudiante para revisar sus libros, solicitudes pendientes y reseñas.</p></div>
           <span class="student-directory-note">Perfiles construidos desde la actividad registrada; esta app aún no tiene cuentas de acceso individuales.</span>

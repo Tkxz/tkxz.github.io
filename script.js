@@ -847,7 +847,7 @@ function renderPage() {
   const pageMatchesRole = Boolean(user && roleAllowsPage(user.role));
   $("#main-nav").hidden = !pageMatchesRole;
   $(".menu-toggle").hidden = !pageMatchesRole;
-  document.querySelectorAll("#main-nav a").forEach((link) => { link.hidden = !pageMatchesRole; });
+  document.querySelectorAll("#main-nav a, #main-nav [role='tab']").forEach((link) => { link.hidden = !pageMatchesRole; });
   $("#app-main").hidden = false;
 
   if (!pageMatchesRole) {
@@ -2907,14 +2907,18 @@ function setupSectionNavigation() {
     window.removeEventListener("hashchange", sectionNavigationUpdate);
     window.removeEventListener("popstate", sectionNavigationUpdate);
   }
-  const links = [...document.querySelectorAll(".main-nav .nav-link[href^='#']:not([hidden])")];
+  const links = [...document.querySelectorAll(".main-nav .nav-link:not([hidden])")];
   const mobileStudentLinks = [...document.querySelectorAll(".student-bottom-nav .nav-link[href^='#']")];
 
   const setActive = (id) => {
     [...links, ...mobileStudentLinks].forEach((link) => {
-      const active = link.getAttribute("href") === `#${id}`;
+      const target = link.dataset.adminPage || link.getAttribute("href")?.slice(1);
+      const active = target === id;
       link.classList.toggle("active", active);
-      if (active) link.setAttribute("aria-current", "location");
+      if (link.getAttribute("role") === "tab") {
+        link.setAttribute("aria-selected", String(active));
+        link.tabIndex = active ? 0 : -1;
+      } else if (active) link.setAttribute("aria-current", "location");
       else link.removeAttribute("aria-current");
     });
   };
@@ -2923,16 +2927,32 @@ function setupSectionNavigation() {
   const studentsPage = $("#estudiantes");
   if (pageRole === "admin" && managementPage && studentsPage) {
     const pages = [managementPage, studentsPage];
-    const activateAdminPage = () => {
-      const currentPage = pages.find((page) => page.id === location.hash.slice(1)) || managementPage;
+    const tabs = [...document.querySelectorAll("#main-nav [data-admin-page]")];
+    const activateAdminPage = (pageId = location.hash.slice(1), updateHistory = false) => {
+      if (typeof pageId !== "string") pageId = location.hash.slice(1);
+      const currentPage = pages.find((page) => page.id === pageId) || managementPage;
+      if (updateHistory && location.hash !== `#${currentPage.id}`) history.pushState(null, "", `#${currentPage.id}`);
       pages.forEach((page) => { page.hidden = page !== currentPage; });
       setActive(currentPage.id);
       if (location.hash !== `#${currentPage.id}`) history.replaceState(null, "", `#${currentPage.id}`);
-      window.scrollTo(0, 0);
     };
 
+    $("#main-nav")?.addEventListener("click", (event) => {
+      const tab = event.target.closest("[data-admin-page]");
+      if (!tab) return;
+      activateAdminPage(tab.dataset.adminPage, true);
+    });
+    $("#main-nav")?.addEventListener("keydown", (event) => {
+      const currentIndex = tabs.indexOf(event.target.closest("[data-admin-page]"));
+      if (currentIndex < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const nextIndex = event.key === "Home" ? 0
+        : event.key === "End" ? tabs.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+      tabs[nextIndex].focus();
+      tabs[nextIndex].click();
+    });
     sectionNavigationUpdate = activateAdminPage;
-    window.addEventListener("hashchange", sectionNavigationUpdate);
     window.addEventListener("popstate", sectionNavigationUpdate);
     activateAdminPage();
     return;
@@ -2994,7 +3014,7 @@ function setupPage() {
   }
   menuToggle.addEventListener("click", () => showMenu(menuToggle.getAttribute("aria-expanded") !== "true"));
   mainNav.addEventListener("click", (event) => {
-    if (event.target.closest("a")) showMenu(false);
+    if (event.target.closest("a, [role='tab']")) showMenu(false);
   });
 
   const themeToggle = $(".theme-toggle");
