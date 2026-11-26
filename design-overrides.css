@@ -776,8 +776,16 @@
   .admin-bottom-nav .nav-link svg { width: 19px; height: 19px; flex: 0 0 19px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
   .admin-bottom-nav .nav-link.active { background: #155875; color: #fff; }
   .admin-bottom-nav .nav-link::after { content: none !important; }
+  :root:not([data-theme="dark"]) .admin-bottom-nav .nav-link:not(.active) { background: transparent; color: #405b67; }
+  :root:not([data-theme="dark"]) .admin-bottom-nav .nav-link:not(.active) svg { color: #405b67; }
   :root[data-theme="dark"] .admin-bottom-nav { border-color: #344a55; background: rgba(27, 41, 50, .98); box-shadow: 0 -4px 18px rgba(0, 0, 0, .3); }
   :root[data-theme="dark"] .admin-bottom-nav .nav-link { color: #a8bbc4; }
   :root[data-theme="dark"] .admin-bottom-nav .nav-link.active { background: #294c5a; color: #eff8fb; }
+  :root[data-theme="dark"] .admin-bottom-nav .nav-link:not(.active) { background: transparent; color: #b9cbd2; }
 }
+
+:root.theme-instant,
+:root.theme-instant *,
+:root.theme-instant *::before,
+:root.theme-instant *::after { transition: none !important; }
 

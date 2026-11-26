@@ -3033,14 +3033,18 @@ function setupPage() {
   const themeToggle = $(".theme-toggle");
   const themeStorageKey = pageRole === "admin" ? "biblioteca-theme-admin" : "biblioteca-theme-student";
   const setTheme = (theme) => {
+    const root = document.documentElement;
+    root.classList.add("theme-instant");
     const isDark = theme === "dark";
-    document.documentElement.dataset.theme = isDark ? "dark" : "light";
+    root.dataset.theme = isDark ? "dark" : "light";
     themeToggle.setAttribute("aria-pressed", String(isDark));
     themeToggle.setAttribute("aria-label", isDark ? "Activar modo claro" : "Activar modo nocturno");
     themeToggle.querySelector(".theme-toggle-icon").textContent = isDark ? "☀" : "☾";
     themeToggle.querySelector(".theme-toggle-label").textContent = isDark ? "Modo claro" : "Modo nocturno";
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", isDark ? "#121714" : "#f7f6f0");
     try { localStorage.setItem(themeStorageKey, isDark ? "dark" : "light"); } catch (error) {}
+    void root.offsetHeight;
+    root.classList.remove("theme-instant");
   };
   setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
   themeToggle.addEventListener("click", () => {
