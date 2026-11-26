@@ -698,11 +698,16 @@
   #panel-inventory .table-scroll td:not(:first-child) { display: none; }
   #panel-inventory .table-scroll th:first-child,
   #panel-inventory .table-scroll td:first-child { width: 100%; }
-  #panel-inventory .inventory-book-cell { min-width: 0; gap: 9px; }
+  #panel-inventory .inventory-book-cell { display: grid; grid-template-columns: 32px minmax(0, 1fr); min-width: 0; gap: 7px 9px; }
   #panel-inventory .inventory-book-copy { min-width: 0; }
   #panel-inventory .inventory-book-copy strong,
   #panel-inventory .inventory-book-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #panel-inventory .inventory-book-copy small:last-child { display: none; }
+  #panel-inventory .inventory-mobile-actions { display: flex; grid-column: 1 / -1; justify-content: flex-end; gap: 8px; }
+  #panel-inventory .inventory-mobile-actions button { min-height: 30px; padding: 0 10px; border: 1px solid #bfd0d7; border-radius: 6px; background: #fff; color: #28627c; font-size: 10px; font-weight: 700; cursor: pointer; }
+  #panel-inventory .inventory-mobile-actions button.danger-action { border-color: #e5c6c1; color: #a64d3e; }
+  :root[data-theme="dark"] #panel-inventory .inventory-mobile-actions button { border-color: #405965; background: #1b2932; color: #bdd8e2; }
+  :root[data-theme="dark"] #panel-inventory .inventory-mobile-actions button.danger-action { border-color: #65423e; color: #f0b4a8; }
   #panel-inventory .inventory-row-cover-image,
   #panel-inventory .inventory-row-cover-fallback { width: 32px; height: 44px; flex-basis: 32px; }
   #panel-inventory .inventory-book-copy strong { font-size: 11px; }

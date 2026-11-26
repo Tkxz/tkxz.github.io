@@ -1528,7 +1528,7 @@ function renderInventory(resetPage = false) {
     const cover = bookCoverImageMarkup(book, "inventory-row-cover-image");
     const fallback = `<span class="inventory-row-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"><span class="cover-title">${escapeHTML(book.title)}</span></span>`;
     return `<tr tabindex="0" data-inventory-book="${escapeHTML(book.id)}" aria-selected="${book.id === selectedInventoryBookId}">
-      <td><div class="inventory-book-cell">${cover || fallback}<span class="inventory-book-copy"><strong>${escapeHTML(book.title)}</strong><small>${escapeHTML(book.author)}</small><small>${escapeHTML(book.publisher || "Editorial sin registrar")} · Edición ${escapeHTML(book.year || "sin registrar")}</small></span></div></td>
+      <td><div class="inventory-book-cell">${cover || fallback}<span class="inventory-book-copy"><strong>${escapeHTML(book.title)}</strong><small>${escapeHTML(book.author)}</small><small>${escapeHTML(book.publisher || "Editorial sin registrar")} · Edición ${escapeHTML(book.year || "sin registrar")}</small></span><span class="inventory-mobile-actions"><button type="button" data-edit-book="${escapeHTML(book.id)}">Ajustar</button><button type="button" class="danger-action" data-delete-book="${escapeHTML(book.id)}">Eliminar</button></span></div></td>
       <td><span class="inventory-theme">${escapeHTML(primaryCategory(book.category) || "Colección")}</span></td>
       <td><span class="inventory-theme">${escapeHTML(bookLocationLabel(book))}</span></td>
       <td class="inventory-total-cell">${book.total}</td>
