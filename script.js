@@ -1653,8 +1653,9 @@ function renderLoans() {
       : ticketLoan
         ? `<div class="row-actions"><span>${escapeHTML(request.ticketId)}</span><button class="table-action" type="button" data-view-ticket="${escapeHTML(ticketLoan.id)}">Ver</button></div>`
         : request.type === "loan" ? `<small>${request.status === "Pendiente" ? "Se genera al aprobar" : "No generado"}</small>` : "—";
+    const approvalLabel = request.type === "return" ? "Aprobar devolución" : "Aprobar préstamo";
     const action = request.status === "Pendiente"
-      ? `<div class="row-actions"><button type="button" data-approve-request="${escapeHTML(request.id)}">Aprobar</button><button type="button" class="danger-action" data-reject-request="${escapeHTML(request.id)}">Rechazar</button></div>`
+      ? `<div class="row-actions"><button type="button" data-approve-request="${escapeHTML(request.id)}">${approvalLabel}</button><button type="button" class="danger-action" data-reject-request="${escapeHTML(request.id)}">Rechazar</button></div>`
       : "—";
     return { date: request.createdAt || "", html: `<tr class="loan-request-row"><td><strong>${escapeHTML(request.student)}</strong></td><td>${escapeHTML(title)}</td><td>${type}</td>
       <td>${formatDate(request.createdAt)}</td><td>${formatDate(request.dueDate)}</td><td>${ticket}</td><td>${statusPill(request.status)}</td><td>${action}</td></tr>` };
