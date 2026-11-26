@@ -533,6 +533,13 @@ h1 em, h2 em { color: var(--green); font-weight: 500; }
 .student-desktop-book-copy h4 { overflow: hidden; margin: 0; color: var(--ink); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .student-desktop-book-copy p { overflow: hidden; margin: 2px 0 4px; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .student-desktop-book-copy small { color: var(--muted); font-size: 10px; }
+.due-date-indicator { font-weight: 700; }
+.due-date-indicator.is-due-safe { color: #287342 !important; }
+.due-date-indicator.is-due-warning { color: #9a7000 !important; }
+.due-date-indicator.is-due-soon, .due-date-indicator.is-overdue { color: #b5483f !important; }
+:root[data-theme="dark"] .due-date-indicator.is-due-safe { color: #8fc59b !important; }
+:root[data-theme="dark"] .due-date-indicator.is-due-warning { color: #f0cf74 !important; }
+:root[data-theme="dark"] .due-date-indicator.is-due-soon, :root[data-theme="dark"] .due-date-indicator.is-overdue { color: #e28f85 !important; }
 .student-desktop-book-card .action-button { min-height: 38px; padding: 0 12px; border-radius: 7px; font-size: 11px; white-space: nowrap; }
 .student-desktop-book-card .action-button:disabled { cursor: default; opacity: .7; }
 .student-desktop-books[hidden] { display: none !important; }

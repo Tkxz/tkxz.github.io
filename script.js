@@ -240,6 +240,13 @@ const formatDate = (value) => {
   if (value.length === 10) return new Date(`${value}T12:00:00`).toLocaleDateString("es-CL");
   return localDate.format(new Date(value)).split("-").reverse().join("-");
 };
+const dueDateTone = (value) => {
+  if (!value) return "";
+  const dueDay = Date.parse(`${String(value).slice(0, 10)}T00:00:00Z`);
+  const today = Date.parse(`${dateToday()}T00:00:00Z`);
+  const days = Math.ceil((dueDay - today) / 86400000);
+  return days < 0 ? "is-overdue" : days <= 3 ? "is-due-soon" : days <= 7 ? "is-due-warning" : "is-due-safe";
+};
 const isLateReturn = (loan) => {
   if (!loan.returnedAt || !loan.dueDate) return false;
   const returnDate = loan.returnedAt.length === 10
@@ -1299,7 +1306,7 @@ function renderMobileMyBooks() {
         <div class="mobile-my-book-status"><span aria-hidden="true">${icon}</span>${status}</div>
         <h4>${escapeHTML(book?.title || title || "Libro")}</h4>
         <p>${escapeHTML(book?.author || "Biblioteca escolar")}</p>
-        ${date ? `<small><strong>${escapeHTML(dateLabel)}</strong> · ${escapeHTML(formatDate(String(date).slice(0, 10)))}</small>` : ""}
+        ${date ? `<small class="due-date-indicator ${loanId ? dueDateTone(date) : ""}"><strong>${escapeHTML(dateLabel)}</strong> · ${escapeHTML(formatDate(String(date).slice(0, 10)))}</small>` : ""}
         ${loanId ? `<span class="mobile-my-book-open-hint">${returnPending ? "Ver solicitud de devolución" : "Ver libro y solicitar devolución"}</span>` : ""}
       </div>
       ${book ? (bookCoverImageMarkup(book, "mobile-my-book-cover") || `<span class="mobile-my-book-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"></span>`) : ""}
@@ -1762,7 +1769,7 @@ function renderStudentPanel() {
     const cover = book && coverArtworkForBook(book)
       ? bookCoverImageMarkup(book, "student-desktop-book-cover")
       : `<span class="student-desktop-book-cover-fallback cover-art ${escapeHTML(book?.cover || "cover-1")}" aria-hidden="true"><span class="cover-title">${escapeHTML(title)}</span></span>`;
-    return `<article class="student-desktop-book-card">${cover}<div class="student-desktop-book-copy"><span class="student-desktop-book-status${loan.status === "Vencido" ? " is-overdue" : ""}">${loan.status === "Vencido" ? "Devolución atrasada" : "Préstamo activo"}</span><h4>${escapeHTML(title)}</h4><p>${escapeHTML(book?.author || "Autor no disponible")}</p><small>Fecha límite: ${escapeHTML(formatDate(loan.dueDate))}</small></div><button class="action-button" type="button" data-return-request-loan="${escapeHTML(loan.id)}"${returnPending ? " disabled" : ""}>${returnPending ? "Devolución solicitada" : "Solicitar devolución"}</button></article>`;
+    return `<article class="student-desktop-book-card">${cover}<div class="student-desktop-book-copy"><span class="student-desktop-book-status${loan.status === "Vencido" ? " is-overdue" : ""}">${loan.status === "Vencido" ? "Devolución atrasada" : "Préstamo activo"}</span><h4>${escapeHTML(title)}</h4><p>${escapeHTML(book?.author || "Autor no disponible")}</p><small class="due-date-indicator ${dueDateTone(loan.dueDate)}">Fecha límite: ${escapeHTML(formatDate(loan.dueDate))}</small></div><button class="action-button" type="button" data-return-request-loan="${escapeHTML(loan.id)}"${returnPending ? " disabled" : ""}>${returnPending ? "Devolución solicitada" : "Solicitar devolución"}</button></article>`;
   }).join("");
   $("#student-summary").innerHTML = [
     ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
