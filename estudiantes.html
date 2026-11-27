@@ -10,12 +10,12 @@
     <meta name="theme-color" content="#16394d" />
     <script>try { if (localStorage.getItem("biblioteca-theme-student") === "dark") document.documentElement.dataset.theme = "dark"; } catch (error) {}</script>
     <title>Estudiantes | Biblioteca Escolar JMC</title>
-    <link rel="stylesheet" href="styles.css?v=due-date-color-scale-1" />
-    <link rel="stylesheet" href="design-overrides.css?v=instant-theme-tab-contrast-1" />
+    <link rel="stylesheet" href="styles.css?v=catalog-discovery-1" />
+    <link rel="stylesheet" href="design-overrides.css?v=compact-catalog-filters-2" />
     <script src="data.js?v=no-ticket-barcode-1" defer></script>
     <script src="assets/portadas/portadas_libros/book-covers.js?v=cover-webp-1" defer></script>
     <script src="local.js?v=no-ticket-barcode-1" defer></script>
-    <script src="script.js?v=due-date-color-scale-1" defer></script>
+    <script src="script.js?v=catalog-discovery-1" defer></script>
   </head>
   <body data-role="student">
     <header class="site-header">
@@ -74,9 +74,15 @@
               <span class="search-shortcut" aria-hidden="true">⌕</span>
             </label>
             <label class="publisher-filter-control"><span>Editorial</span><select id="publisher-filter" aria-label="Filtrar libros por editorial"><option value="all">Todas las editoriales</option></select></label>
+            <label class="catalog-sort-control"><span>Ordenar por</span><select id="catalog-sort" aria-label="Ordenar catálogo"><option value="recommended">Recomendados</option><option value="popular">Más solicitados</option><option value="available">Más disponibles</option><option value="title">Título A–Z</option></select></label>
           </div>
           <label class="available-only-control"><input id="available-only" type="checkbox"><span>Solo disponibles</span></label>
         </div>
+
+        <section class="catalog-picks" id="catalog-picks" aria-labelledby="catalog-picks-title" hidden>
+          <div class="catalog-picks-heading"><div><h3 id="catalog-picks-title">Ideas para tu próxima lectura</h3><p>Libros populares y bien valorados de la biblioteca.</p></div></div>
+          <div class="catalog-picks-list" id="catalog-picks-list"></div>
+        </section>
 
         <section class="mobile-my-books" id="mobile-my-books" aria-labelledby="mobile-my-books-title" hidden>
           <div class="mobile-shelf-heading"><h3 id="mobile-my-books-title">Mis libros</h3><div class="mobile-shelf-controls"><button type="button" data-my-books-scroll="-1" aria-label="Ver libros anteriores">‹</button><button type="button" data-my-books-scroll="1" aria-label="Ver más libros">›</button></div></div>
@@ -178,7 +184,8 @@
         <p id="dialog-description"></p>
         <div class="dialog-meta" id="dialog-meta"></div>
         <a class="google-books-link" id="google-books-link" href="#" target="_blank" rel="noopener noreferrer" hidden>Ver portada y ficha en Google Books <span aria-hidden="true">↗</span></a>
-        <p class="availability-note">Consulta la disponibilidad en la biblioteca de tu escuela.</p>
+        <p class="availability-note"></p>
+        <section class="dialog-alternatives" id="dialog-alternatives" aria-label="Libros similares disponibles" hidden></section>
       </div>
       <section class="dialog-reviews" aria-labelledby="dialog-reviews-title">
         <div class="dialog-reviews-heading">

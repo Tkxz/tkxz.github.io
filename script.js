@@ -1349,6 +1349,57 @@ function renderMobileBookShelves(books) {
   }).join("");
 }
 
+function catalogPopularity() {
+  const counts = new Map();
+  data.requests.filter((request) => request.type === "loan").forEach((request) => {
+    const id = String(request.bookId || "");
+    if (id) counts.set(id, (counts.get(id) || 0) + 1);
+  });
+  return counts;
+}
+
+function renderCatalogPicks() {
+  const section = $("#catalog-picks");
+  const list = $("#catalog-picks-list");
+  if (!section || !list) return [];
+  const popularity = catalogPopularity();
+  const hasSignals = popularity.size > 0 || data.reviews.length > 0;
+  const description = $("#catalog-picks .catalog-picks-heading p");
+  if (description) description.textContent = hasSignals
+    ? "Títulos disponibles, ordenados según las solicitudes y reseñas de estudiantes."
+    : "Títulos disponibles para explorar la colección.";
+  const picks = [...data.books].filter((book) => Number(book.available) > 0)
+    .sort((a, b) => (popularity.get(String(b.id)) || 0) - (popularity.get(String(a.id)) || 0)
+      || ratingSummary(b.id).average - ratingSummary(a.id).average
+      || Number(b.available) - Number(a.available)
+      || a.title.localeCompare(b.title, "es"))
+    .slice(0, 5);
+  section.hidden = picks.length === 0;
+  list.innerHTML = picks.map((book) => {
+    const cover = bookCoverImageMarkup(book, "catalog-pick-cover");
+    const fallback = `<span class="catalog-pick-cover-fallback cover-art ${escapeHTML(book.cover || "cover-1")}" aria-hidden="true"><span class="cover-title">${escapeHTML(book.title)}</span></span>`;
+    const rating = ratingSummary(book.id);
+    return `<button class="catalog-pick" type="button" data-book="${escapeHTML(book.id)}" aria-label="Ver detalles de ${escapeHTML(book.title)}">
+      ${cover || fallback}<span class="catalog-pick-copy"><strong>${escapeHTML(book.title)}</strong><small>${escapeHTML(book.author)}</small><small class="catalog-pick-meta">${rating.count ? `★ ${rating.average.toFixed(1)} · ` : ""}${book.available} ${book.available === 1 ? "ejemplar disponible" : "ejemplares disponibles"}</small></span>
+    </button>`;
+  }).join("");
+  return picks;
+}
+
+function sortCatalogBooks(books, sortMode) {
+  const popularity = catalogPopularity();
+  return [...books].sort((a, b) => {
+    if (sortMode === "title") return a.title.localeCompare(b.title, "es");
+    if (sortMode === "available") return Number(b.available) - Number(a.available) || a.title.localeCompare(b.title, "es");
+    if (sortMode === "popular") return (popularity.get(String(b.id)) || 0) - (popularity.get(String(a.id)) || 0)
+      || ratingSummary(b.id).average - ratingSummary(a.id).average || a.title.localeCompare(b.title, "es");
+    return (popularity.get(String(b.id)) || 0) - (popularity.get(String(a.id)) || 0)
+      || ratingSummary(b.id).average - ratingSummary(a.id).average
+      || Number(b.available) - Number(a.available)
+      || a.title.localeCompare(b.title, "es");
+  });
+}
+
 function renderCatalog(resetScroll = false) {
   const grid = $("#book-grid");
   if (!grid) return;
@@ -1356,18 +1407,21 @@ function renderCatalog(resetScroll = false) {
   const query = $("#book-search").value.trim().toLocaleLowerCase("es");
   const selected = $(".filter-chip.selected")?.dataset.category || "Todos";
   const selectedPublisher = $("#publisher-filter")?.value || "all";
+  const sortMode = $("#catalog-sort")?.value || "recommended";
   const availableOnly = Boolean($("#available-only")?.checked);
   const readBookIds = new Set(getReadBooks().map((book) => book.id));
-  const visible = data.books.filter((book) =>
+  const matching = data.books.filter((book) =>
     (selected === "Todos" || catalogFilterCategory(book) === selected)
     && (selectedPublisher === "all" || publisherFilterKey(book.publisher) === selectedPublisher)
     && (!availableOnly || book.available > 0)
     && `${book.title} ${book.author} ${book.category} ${book.isbn} ${book.publisher} ${book.year}`.toLocaleLowerCase("es").includes(query)
   );
+  const visible = sortCatalogBooks(matching, sortMode);
   if (resetScroll) catalogPage = 1;
   const pagination = updateBookPagination("#catalog-pagination", "#catalog-page-status", catalogPage, visible.length);
   catalogPage = pagination.page;
   const pageBooks = visible.slice(pagination.start, pagination.start + BOOKS_PER_PAGE);
+  const picks = renderCatalogPicks();
   grid.innerHTML = pageBooks.map((book) => {
     const rating = ratingSummary(book.id);
     const isRead = readBookIds.has(book.id);
@@ -1383,7 +1437,7 @@ function renderCatalog(resetScroll = false) {
   }).join("");
   renderMobileBookShelves(visible);
   const myBooks = renderMobileMyBooks();
-  loadGoogleBookCovers([...pageBooks, ...myBooks]).then((updated) => {
+  loadGoogleBookCovers([...pageBooks, ...myBooks, ...picks]).then((updated) => {
     if (!updated) return;
     renderCatalog(false);
     refreshOpenGoogleBooksLink();
@@ -1415,9 +1469,28 @@ function showBookDetails(id, returnLoanId = null) {
   $("#dialog-author").textContent = `Por ${book.author}`;
   $("#dialog-description").textContent = book.description || "Sin descripción disponible.";
   const rating = ratingSummary(book.id);
-  $("#dialog-meta").textContent = [book.publisher ? `Editorial: ${book.publisher}` : "Editorial sin registrar", book.year ? `Año de edición: ${book.year}` : "Año de edición sin registrar", book.pages, bookLocationLabel(book), `${book.available} ejemplares disponibles`, rating.count ? `★ ${rating.average.toFixed(1)}/5 (${rating.count} reseñas)` : "Sin valoraciones"].filter(Boolean).join(" · ");
+  $("#dialog-meta").textContent = [book.publisher ? `Editorial: ${book.publisher}` : "Editorial sin registrar", book.year ? `Año de edición: ${book.year}` : "Año de edición sin registrar", book.pages, bookLocationLabel(book), `Estado físico: ${book.condition || "No especificado"}`, book.isbn ? `ISBN: ${book.isbn}` : "ISBN no registrado", rating.count ? `★ ${rating.average.toFixed(1)}/5 (${rating.count} reseñas)` : "Sin valoraciones"].filter(Boolean).join(" · ");
   renderBookReviews(book.id);
-  $(".availability-note").textContent = `Estado físico: ${book.condition || "No especificado"}. ISBN: ${book.isbn || "No registrado"}.`;
+  const availabilityNote = $(".availability-note");
+  availabilityNote.classList.toggle("is-unavailable", Number(book.available) < 1);
+  availabilityNote.textContent = Number(book.available) > 0
+    ? `${book.available} ${book.available === 1 ? "ejemplar disponible" : "ejemplares disponibles"} para solicitar.`
+    : "Sin ejemplares disponibles ahora.";
+  const alternatives = $("#dialog-alternatives");
+  if (Number(book.available) < 1) {
+    const alternativesList = data.books.filter((candidate) => String(candidate.id) !== String(book.id)
+      && Number(candidate.available) > 0 && catalogFilterCategory(candidate) === catalogFilterCategory(book));
+    const suggestions = (alternativesList.length ? alternativesList : data.books.filter((candidate) => String(candidate.id) !== String(book.id) && Number(candidate.available) > 0))
+      .sort((a, b) => ratingSummary(b.id).average - ratingSummary(a.id).average || Number(b.available) - Number(a.available) || a.title.localeCompare(b.title, "es"))
+      .slice(0, 3);
+    alternatives.hidden = suggestions.length === 0;
+    alternatives.innerHTML = suggestions.length
+      ? `<h3>Prueba también</h3><div class="dialog-alternatives-list">${suggestions.map((candidate) => `<button type="button" data-book="${escapeHTML(candidate.id)}"><strong>${escapeHTML(candidate.title)}</strong><span>${escapeHTML(candidate.author)} · ${candidate.available} disponibles</span></button>`).join("")}</div>`
+      : "";
+  } else {
+    alternatives.hidden = true;
+    alternatives.innerHTML = "";
+  }
   $("#student-loan-form")?.remove();
   $("#student-return-form")?.remove();
   if (data.user?.role === "student") {
@@ -1449,50 +1522,51 @@ function showBookDetails(id, returnLoanId = null) {
         $(".dialog-copy").append(form);
       }
     } else {
-    const form = document.createElement("form");
-    form.id = "student-loan-form";
-    form.className = "student-loan-form";
-    const dueDateField = document.createElement("label");
-    dueDateField.className = "form-field";
-    dueDateField.append("Fecha de devolución (máximo 14 días)");
-    const dueDate = document.createElement("input");
-    dueDate.type = "date";
-    dueDate.name = "dueDate";
-    dueDate.required = true;
-    dueDate.min = dateToday();
-    dueDate.max = dateAfterDays(dateToday(), 14);
-    dueDate.value = dueDate.max;
-    dueDateField.append(dueDate);
-    attachDatePicker(dueDate);
+      if (Number(book.available) > 0) {
+        const form = document.createElement("form");
+        form.id = "student-loan-form";
+        form.className = "student-loan-form";
+        const dueDateField = document.createElement("label");
+        dueDateField.className = "form-field";
+        dueDateField.append("Fecha de devolución (máximo 14 días)");
+        const dueDate = document.createElement("input");
+        dueDate.type = "date";
+        dueDate.name = "dueDate";
+        dueDate.required = true;
+        dueDate.min = dateToday();
+        dueDate.max = dateAfterDays(dateToday(), 14);
+        dueDate.value = dueDate.max;
+        dueDateField.append(dueDate);
+        attachDatePicker(dueDate);
 
-    const errorRegion = document.createElement("p");
-    errorRegion.className = "form-error";
-    errorRegion.setAttribute("role", "alert");
-    errorRegion.hidden = true;
-    const submit = document.createElement("button");
-    submit.id = "student-book-request";
-    submit.className = "action-button";
-    submit.type = "submit";
-    submit.textContent = book.available > 0 ? "Solicitar préstamo" : "Sin ejemplares disponibles";
-    submit.disabled = book.available < 1;
-    form.append(dueDateField, errorRegion, submit);
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      runAction(submit, async () => {
-        await mutate("/requests", "POST", {
-          type: "loan",
-          bookId: book.id,
-          dueDate: dueDate.value,
-          ticketRequested: true,
-        }, "Solicitud enviada. Espera la aprobación de biblioteca.");
-        if (form.isConnected) $("#book-dialog").close();
-      }, errorRegion);
-    });
-    $(".dialog-copy").append(form);
+        const errorRegion = document.createElement("p");
+        errorRegion.className = "form-error";
+        errorRegion.setAttribute("role", "alert");
+        errorRegion.hidden = true;
+        const submit = document.createElement("button");
+        submit.id = "student-book-request";
+        submit.className = "action-button";
+        submit.type = "submit";
+        submit.textContent = "Solicitar préstamo";
+        form.append(dueDateField, errorRegion, submit);
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          runAction(submit, async () => {
+            await mutate("/requests", "POST", {
+              type: "loan",
+              bookId: book.id,
+              dueDate: dueDate.value,
+              ticketRequested: true,
+            }, "Solicitud enviada. Espera la aprobación de biblioteca.");
+            if (form.isConnected) $("#book-dialog").close();
+          }, errorRegion);
+        });
+        $(".dialog-copy").append(form);
+      }
     }
   }
   const dialog = $("#book-dialog");
-  dialog.showModal();
+  if (!dialog.open) dialog.showModal();
   dialog.scrollTop = 0;
   loadGoogleBookCovers([book]).then((updated) => {
     if (updated) refreshOpenGoogleBooksLink();
@@ -1752,8 +1826,11 @@ function renderStudentPanel() {
   const { loans, requests } = data;
   const readBooks = getReadBooks();
   if (!studentPanelInitialized) {
-    selectedSummaryPanel = "read";
-    $("#student-read-books").hidden = false;
+    selectedSummaryPanel = "active";
+    studentActivityMode = "active";
+    $("#student-read-books").hidden = true;
+    $("#student-request-details").hidden = false;
+    $("#student-activity").hidden = false;
     studentPanelInitialized = true;
   }
   const pendingLoans = requests.filter((request) => request.type === "loan" && request.status === "Pendiente").length;
@@ -1773,9 +1850,9 @@ function renderStudentPanel() {
     return `<article class="student-desktop-book-card">${cover}<div class="student-desktop-book-copy"><span class="student-desktop-book-status${loan.status === "Vencido" ? " is-overdue" : ""}">${loan.status === "Vencido" ? "Devolución atrasada" : "Préstamo activo"}</span><h4>${escapeHTML(title)}</h4><p>${escapeHTML(book?.author || "Autor no disponible")}</p><small class="due-date-indicator ${dueDateTone(loan.dueDate)}">Fecha límite: ${escapeHTML(formatDate(loan.dueDate))}</small></div><button class="action-button" type="button" data-return-request-loan="${escapeHTML(loan.id)}"${returnPending ? " disabled" : ""}>${returnPending ? "Devolución solicitada" : "Solicitar devolución"}</button></article>`;
   }).join("");
   $("#student-summary").innerHTML = [
-    ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
+    ["Préstamos activos", currentLoans.length, "Ver libros por devolver", "active"],
     ["Préstamos pendientes", pendingLoans, "Ver solicitudes pendientes", "pending"],
-    ["Historial de actividades", loans.length + requests.length, "Ver todos los movimientos", "history"],
+    ["Libros leídos", readBooks.length, "Ver libros devueltos", "read"],
   ].map(([label, count, note, key]) => key === "read"
     ? `<button class="stat-card stat-card-button" id="student-read-books-toggle" type="button" aria-controls="student-read-books" aria-expanded="${readBooksOpen}" aria-pressed="${selectedSummaryPanel === "read"}"><span>${label}</span><strong>${count}</strong><small>${note}</small></button>`
     : `<button class="stat-card stat-card-button" type="button" data-activity-mode="${key}" aria-controls="student-request-details" aria-expanded="${activityOpen && selectedSummaryPanel === key}" aria-pressed="${selectedSummaryPanel === key}"><span>${label}</span><strong>${count}</strong><small>${note}</small></button>`).join("");
@@ -2674,6 +2751,7 @@ function bindUI() {
   });
   $("#book-search")?.addEventListener("input", () => renderCatalog(true));
   $("#publisher-filter")?.addEventListener("change", () => renderCatalog(true));
+  $("#catalog-sort")?.addEventListener("change", () => renderCatalog(true));
   $("#catalog-pagination")?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-page]");
     if (!button || button.disabled) return;
@@ -2693,6 +2771,14 @@ function bindUI() {
       shelf?.scrollBy({ left: Number(scrollButton.dataset.shelfScroll) * 140, behavior: "smooth" });
       return;
     }
+    const button = event.target.closest("[data-book]");
+    if (button) showBookDetails(button.dataset.book);
+  });
+  $("#catalog-picks-list")?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-book]");
+    if (button) showBookDetails(button.dataset.book);
+  });
+  $("#dialog-alternatives")?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-book]");
     if (button) showBookDetails(button.dataset.book);
   });

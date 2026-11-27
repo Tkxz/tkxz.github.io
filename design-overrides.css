@@ -574,6 +574,56 @@
 :root[data-theme="dark"] .inventory-request-select { border-color: #405965; background: #20323b; color: #d4e3e8; }
 :root[data-theme="dark"] .inventory-detail-actions .inventory-detail-edit { border-color: #405965; background: #1b2932; color: #bdd8e2; }
 
+/* Descubrimiento del catálogo, disponibilidad clara y controles del panel. */
+.catalog-sort-control { display: grid; gap: 3px; min-width: 0; color: var(--muted); font-size: 9px; }
+.catalog-sort-control .custom-select-control { width: 100%; min-width: 0; }
+.catalog-sort-control .custom-select-trigger { min-height: 37px; height: 37px; font-size: 16px; }
+.catalog-picks { margin: 0 0 26px; padding: 18px 20px 16px; border: 1px solid #d9e4e6; border-radius: 12px; background: linear-gradient(120deg, #f3f8f7, #fff); }
+.catalog-picks[hidden] { display: none !important; }
+.catalog-picks-heading h3 { margin: 0; color: #183b50; font-size: 18px; }
+.catalog-picks-heading p { margin: 4px 0 14px; color: #657b85; font-size: 12px; }
+.catalog-picks-list { display: grid; grid-auto-columns: minmax(190px, 1fr); grid-auto-flow: column; gap: 10px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; }
+.catalog-pick { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 9px; border: 1px solid #e1e9e9; border-radius: 9px; background: #fff; color: inherit; text-align: left; cursor: pointer; }
+.catalog-pick:hover { border-color: #8eafb9; box-shadow: 0 4px 12px rgba(21, 68, 88, .08); }
+.catalog-pick-cover, .catalog-pick-cover-fallback { display: block; width: 42px; height: 58px; flex: 0 0 42px; border-radius: 4px 7px 7px 4px; object-fit: contain; }
+.catalog-pick-cover { background: #edf3f2; }
+.catalog-pick-cover-fallback { position: relative; }
+.catalog-pick-cover-fallback .cover-title { font-size: 6px; }
+.catalog-pick-copy { display: grid; gap: 3px; min-width: 0; }
+.catalog-pick-copy strong, .catalog-pick-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-pick-copy strong { color: #193c51; font-size: 12px; }
+.catalog-pick-copy small { color: #71838c; font-size: 10px; }
+.catalog-pick-copy .catalog-pick-meta { color: #2f7b58; font-weight: 700; }
+.availability-note { margin-top: 14px !important; padding: 11px 13px !important; border: 1px solid #c8e0d0; border-radius: 8px; background: #eff8f1; color: #246342 !important; font-size: 13px !important; font-weight: 750; line-height: 1.45 !important; }
+.availability-note.is-unavailable { border-color: #ead7b2; background: #fff7e8; color: #815d1f !important; }
+.dialog-alternatives { margin-top: 12px; }
+.dialog-alternatives[hidden] { display: none !important; }
+.dialog-alternatives h3 { margin: 0 0 7px; color: var(--ink); font-size: 13px; }
+.dialog-alternatives-list { display: grid; gap: 6px; }
+.dialog-alternatives-list button { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; }
+.dialog-alternatives-list button:hover { border-color: #8eafb9; }
+.dialog-alternatives-list button strong { font-size: 12px; }
+.dialog-alternatives-list button span { color: var(--muted); font-size: 10px; }
+:root[data-theme="dark"] .catalog-picks { border-color: #344a55; background: linear-gradient(120deg, #1b2c34, #1b2932); }
+:root[data-theme="dark"] .catalog-picks-heading h3,
+:root[data-theme="dark"] .catalog-pick-copy strong { color: #e0e9ed; }
+:root[data-theme="dark"] .catalog-picks-heading p,
+:root[data-theme="dark"] .catalog-pick-copy small { color: #a8bbc4; }
+:root[data-theme="dark"] .catalog-pick { border-color: #344a55; background: #20323b; }
+:root[data-theme="dark"] .catalog-pick-cover { background: #263a42; }
+:root[data-theme="dark"] .catalog-pick-copy .catalog-pick-meta { color: #91c8ac; }
+:root[data-theme="dark"] .availability-note { border-color: #365a45; background: #20392b; color: #b8ddc4 !important; }
+:root[data-theme="dark"] .availability-note.is-unavailable { border-color: #665333; background: #382f20; color: #e5c77f !important; }
+@media (min-width: 681px) {
+  .catalog-tools { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 24px 0 18px; }
+  .catalog-tools .filter-list { grid-row: 2; width: 100%; flex: none; flex-wrap: wrap; overflow: visible; padding: 2px 0; scrollbar-width: none; scroll-snap-type: none; }
+  .catalog-tools .filter-list::-webkit-scrollbar { display: none; }
+  .catalog-search-controls { grid-row: 1; display: grid; flex: none; width: 100%; grid-template-columns: minmax(220px, 1.35fr) minmax(180px, 1fr) minmax(165px, .9fr); align-items: end; gap: 10px; }
+  .catalog-search-controls .search-box { height: 39px; }
+  .catalog-search-controls .publisher-filter-control .custom-select-trigger,
+  .catalog-search-controls .catalog-sort-control .custom-select-trigger { min-height: 39px; height: 39px; font-size: 14px; }
+}
+
 @media (max-width: 680px) {
   :root:not([data-theme="dark"]) #biblioteca,
   :root:not([data-theme="dark"]) .catalog-section { background: #f1f5f5; }
@@ -599,6 +649,13 @@
   .catalog-search-controls { order: 0; flex: 0 0 auto; width: 100%; }
   .catalog-tools .catalog-search-controls .search-box { width: 100%; height: 46px; }
   .catalog-search-controls .publisher-filter-control .custom-select-trigger { min-height: 46px; height: 46px; }
+  .catalog-search-controls .catalog-sort-control .custom-select-trigger { min-height: 46px; height: 46px; font-size: 15px; }
+  .catalog-sort-control { font-size: 10px; }
+  .catalog-picks { margin: 0 0 22px; padding: 14px 12px 12px; border-radius: 10px; }
+  .catalog-picks-heading h3 { font-size: 16px; }
+  .catalog-picks-heading p { margin-bottom: 10px; font-size: 11px; }
+  .catalog-picks-list { grid-auto-columns: minmax(220px, 82%); gap: 8px; }
+  .availability-note { font-size: 14px !important; }
   .available-only-control { order: 1; display: inline-flex; align-items: center; align-self: flex-start; gap: 7px; color: #526779; font-size: 12px; font-weight: 600; }
   .available-only-control input { width: 16px; height: 16px; margin: 0; accent-color: #155875; }
   :root[data-theme="dark"] .available-only-control { color: #b9c8ce; }
